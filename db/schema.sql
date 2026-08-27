@@ -2,8 +2,6 @@
 -- PostgreSQL database dump
 --
 
-\restrict PiiOd0muYDCd7ZrCi5EeYYs8vmiOVuggD2nj8mseSqlCodnrM9CxPNGn3AvGWhr
-
 -- Dumped from database version 18.4
 -- Dumped by pg_dump version 18.4
 
@@ -506,6 +504,3 @@ ALTER TABLE ONLY public.app_user
 --
 -- PostgreSQL database dump complete
 --
-
-\unrestrict PiiOd0muYDCd7ZrCi5EeYYs8vmiOVuggD2nj8mseSqlCodnrM9CxPNGn3AvGWhr
-
