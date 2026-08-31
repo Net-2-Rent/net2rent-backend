@@ -11,5 +11,6 @@ public class Net2rentBackendApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(Net2rentBackendApplication.class, args);
+		System.out.println(">>> Net2rent backend is up and running");
 	}
 }
