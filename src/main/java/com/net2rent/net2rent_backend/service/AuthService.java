@@ -53,6 +53,6 @@ public class AuthService {
         userRepository.save(user);
 
         String token = jwtService.generateToken(user);
-        return new LoginResponse(token, user.getEmail(), user.getFirstName(), user.getRole().name());
+        return new LoginResponse(token, user.getEmail(), user.getFirstName(), user.getLastName(), user.getRole().name());
     }
 }
