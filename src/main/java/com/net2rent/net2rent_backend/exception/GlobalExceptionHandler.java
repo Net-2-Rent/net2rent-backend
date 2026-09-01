@@ -31,6 +31,12 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), List.of(), request);
     }
 
+    @ExceptionHandler(InvalidGuestCredentialsException.class)
+    public ResponseEntity<ApiError> handleInvalidGuestCredentials(
+            InvalidGuestCredentialsException ex, HttpServletRequest request) {
+        return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), List.of(), request);
+    }
+
     @ExceptionHandler(NotFoundException.class)
     public ResponseEntity<ApiError> handleNotFound(
             NotFoundException ex, HttpServletRequest request) {
