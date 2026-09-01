@@ -1,10 +1,14 @@
 package com.net2rent.net2rent_backend.repository;
 
-import java.util.*;
 import com.net2rent.net2rent_backend.model.Lodging;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface LodgingRepository extends JpaRepository<Lodging, Long> {
-    Optional<Lodging> findByRef(String ref);
+import java.util.List;
+import java.util.Optional;
 
+public interface LodgingRepository extends JpaRepository<Lodging, Long> {
+
+    List<Lodging> findByAccount_Id(Long accountId);
+
+    Optional<Lodging> findByIdAndAccount_Id(Long id, Long accountId);
 }
