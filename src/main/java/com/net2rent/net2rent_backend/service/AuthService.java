@@ -1,6 +1,9 @@
 package com.net2rent.net2rent_backend.service;
 
 import java.time.LocalDateTime;
+
+import com.net2rent.net2rent_backend.dto.ChangePasswordRequest;
+import com.net2rent.net2rent_backend.exception.ConflictException;
 import com.net2rent.net2rent_backend.dto.LoginRequest;
 import com.net2rent.net2rent_backend.dto.LoginResponse;
 import com.net2rent.net2rent_backend.exception.InvalidCredentialsException;
@@ -11,6 +14,7 @@ import com.net2rent.net2rent_backend.security.LoginAttemptService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 
 @Service
 public class AuthService {
@@ -54,5 +58,18 @@ public class AuthService {
 
         String token = jwtService.generateToken(user);
         return new LoginResponse(token, user.getEmail(), user.getFirstName(), user.getLastName(), user.getRole().name());
+    }
+
+    @Transactional
+    public void changePassword(Long userId, ChangePasswordRequest request) {
+        AppUser user = userRepository.findById(userId)
+        .orElseThrow(() -> new ConflictException("No se pudo cambiar la contraseña."));
+
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
+            throw new ConflictException("La contraseña actual no es correcta.");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
     }
 }
