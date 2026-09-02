@@ -31,3 +31,13 @@ VALUES
     (2, 2, 'APT-2001',
      '$2b$10$oPN2dLCxpahTO1Af4sFutuMmS/bt3sgJCf/SDpq78qitfdywngNzy', 'Piso Playa', true)
     ON CONFLICT (id) DO NOTHING;
+    
+
+    SELECT setval('lodging_id_seq', (SELECT COALESCE(MAX(id), 1) FROM lodging));
+
+-- Sync the "lodging" sequence with the highest id inserted above.
+-- Needed because the INSERTs in this seed use explicit ids (1, 2), which
+-- does not advance Postgres's internal sequence (lodging_id_seq). Without
+-- this line, the first lodging created from the app collides with
+-- "duplicate key value violates unique constraint lodging_pkey", because
+-- Postgres tries to reuse id=1, which already exists from the seed.
