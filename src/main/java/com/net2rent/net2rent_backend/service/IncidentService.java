@@ -6,22 +6,13 @@ import com.net2rent.net2rent_backend.dto.IncidentResponse;
 import com.net2rent.net2rent_backend.dto.request.CreatePhoneIncidentRequest;
 import com.net2rent.net2rent_backend.exception.ConflictException;
 import com.net2rent.net2rent_backend.exception.NotFoundException;
-<<<<<<< HEAD
-import com.net2rent.net2rent_backend.model.AppUser;
-import com.net2rent.net2rent_backend.model.Incident;
-import com.net2rent.net2rent_backend.model.IncidentHistory;
-import com.net2rent.net2rent_backend.model.enums.IncidentCategory;
-import com.net2rent.net2rent_backend.model.enums.IncidentPriority;
-import com.net2rent.net2rent_backend.model.enums.UserRole;
-import com.net2rent.net2rent_backend.repository.IncidentHistoryRepository;
-import com.net2rent.net2rent_backend.repository.IncidentRepository;
-=======
 import com.net2rent.net2rent_backend.model.Account;
 import com.net2rent.net2rent_backend.model.AppUser;
 import com.net2rent.net2rent_backend.model.Incident;
 import com.net2rent.net2rent_backend.model.IncidentCounter;
 import com.net2rent.net2rent_backend.model.IncidentHistory;
 import com.net2rent.net2rent_backend.model.Lodging;
+import com.net2rent.net2rent_backend.model.enums.IncidentCategory;
 import com.net2rent.net2rent_backend.model.enums.IncidentPriority;
 import com.net2rent.net2rent_backend.model.enums.IncidentSource;
 import com.net2rent.net2rent_backend.model.enums.IncidentStatus;
@@ -30,7 +21,6 @@ import com.net2rent.net2rent_backend.repository.IncidentCounterRepository;
 import com.net2rent.net2rent_backend.repository.IncidentHistoryRepository;
 import com.net2rent.net2rent_backend.repository.IncidentRepository;
 import com.net2rent.net2rent_backend.repository.LodgingRepository;
->>>>>>> origin/dev
 import com.net2rent.net2rent_backend.repository.UserRepository;
 import com.net2rent.net2rent_backend.security.AuthUser;
 import org.springframework.stereotype.Service;
@@ -43,24 +33,12 @@ import java.util.List;
 @Service
 public class IncidentService {
 
-<<<<<<< HEAD
+    // --- Tipos de evento del historial (triage NET-66) ---
     private static final String CATEGORY_CHANGED = "CATEGORY_CHANGED";
     private static final String PRIORITY_CHANGED = "PRIORITY_CHANGED";
     private static final String TITLE_CHANGED = "TITLE_CHANGED";
     private static final String DESCRIPTION_CHANGED = "DESCRIPTION_CHANGED";
 
-    private static final int TITLE_MAX_FROM_DESCRIPTION = 80;
-
-    private final IncidentRepository incidentRepository;
-    private final IncidentHistoryRepository incidentHistoryRepository;
-    private final UserRepository userRepository;
-    private final Clock clock;
-
-    public IncidentService(IncidentRepository incidentRepository, IncidentHistoryRepository incidentHistoryRepository,
-            UserRepository userRepository, Clock clock) {
-        this.incidentRepository = incidentRepository;
-        this.incidentHistoryRepository = incidentHistoryRepository;
-=======
     private final IncidentRepository incidentRepository;
     private final IncidentCounterRepository incidentCounterRepository;
     private final IncidentHistoryRepository incidentHistoryRepository;
@@ -68,20 +46,22 @@ public class IncidentService {
     private final UserRepository userRepository;
     private final Clock clock;
 
+    // Constructor UNIÓN: las 6 dependencias (las tuyas + las de la compi).
     public IncidentService(IncidentRepository incidentRepository,
-                           IncidentCounterRepository incidentCounterRepository,
-                           IncidentHistoryRepository incidentHistoryRepository,
-                           LodgingRepository lodgingRepository,
-                           UserRepository userRepository,
-                           Clock clock) {
+            IncidentCounterRepository incidentCounterRepository,
+            IncidentHistoryRepository incidentHistoryRepository,
+            LodgingRepository lodgingRepository,
+            UserRepository userRepository,
+            Clock clock) {
         this.incidentRepository = incidentRepository;
         this.incidentCounterRepository = incidentCounterRepository;
         this.incidentHistoryRepository = incidentHistoryRepository;
         this.lodgingRepository = lodgingRepository;
->>>>>>> origin/dev
         this.userRepository = userRepository;
         this.clock = clock;
     }
+
+    // ---------- Lectura ----------
 
     @Transactional(readOnly = true)
     public List<IncidentResponse> list(AuthUser user) {
@@ -104,93 +84,9 @@ public class IncidentService {
                 .orElseThrow(() -> new NotFoundException("Incidencia no encontrada"));
     }
 
-    @Transactional
-<<<<<<< HEAD
-    public IncidentResponse classify(Long incidentId, ClassifyIncidentRequest request, AuthUser user) {
-        Incident incident = getOwnedByAccountOr404(incidentId, user);
-        AppUser actor = userRepository.getReferenceById(user.userId());
-
-        IncidentCategory oldCategory = incident.getCategory();
-        if (oldCategory != request.category()) {
-            incident.setCategory(request.category());
-            recordChange(incident, actor, CATEGORY_CHANGED, nameOrNull(oldCategory), request.category().name());
-        }
-
-        IncidentPriority oldPriority = incident.getPriority();
-        if (oldPriority != request.priority()) {
-            incident.setPriority(request.priority());
-            recordChange(incident, actor, PRIORITY_CHANGED, nameOrNull(oldPriority), request.priority().name());
-        }
-
-        incidentRepository.save(incident);
-        return IncidentResponse.from(incident);
-    }
+    // ---------- Alta por teléfono ----------
 
     @Transactional
-    public IncidentResponse markUrgent(Long incidentId, AuthUser user) {
-        Incident incident = getOwnedByAccountOr404(incidentId, user);
-        AppUser actor = userRepository.getReferenceById(user.userId());
-
-        IncidentPriority oldPriority = incident.getPriority();
-        if (oldPriority != IncidentPriority.URGENT) {
-            incident.setPriority(IncidentPriority.URGENT);
-            recordChange(incident, actor, PRIORITY_CHANGED, nameOrNull(oldPriority), IncidentPriority.URGENT.name());
-            incidentRepository.save(incident);
-        }
-
-        return IncidentResponse.from(incident);
-    }
-
-    @Transactional
-    public IncidentResponse correctText(Long incidentId, CorrectIncidentTextRequest request, AuthUser user) {
-        Incident incident = getOwnedByAccountOr404(incidentId, user);
-        AppUser actor = userRepository.getReferenceById(user.userId());
-
-        String oldDescription = incident.getDescription();
-        if (!request.description().equals(oldDescription)) {
-            incident.setDescription(request.description());
-            recordChange(incident, actor, DESCRIPTION_CHANGED, oldDescription, request.description());
-        }
-
-        String newTitle = resolveTitle(request.title(), request.description());
-        String oldTitle = incident.getTitle();
-        if (!newTitle.equals(oldTitle)) {
-            incident.setTitle(newTitle);
-            recordChange(incident, actor, TITLE_CHANGED, oldTitle, newTitle);
-        }
-
-        incidentRepository.save(incident);
-        return IncidentResponse.from(incident);
-    }
-
-    private String resolveTitle(String title, String description) {
-        if (title != null && !title.isBlank()) {
-            return title.trim();
-        }
-        String base = description.trim();
-        return base.length() <= TITLE_MAX_FROM_DESCRIPTION
-                ? base
-                : base.substring(0, TITLE_MAX_FROM_DESCRIPTION).trim();
-    }
-
-    private void recordChange(Incident incident, AppUser actor, String eventType,
-            String previousValue, String newValue) {
-        IncidentHistory event = IncidentHistory.builder()
-                .incident(incident)
-                .actor(actor)
-                .eventType(eventType)
-                .previousValue(previousValue)
-                .newValue(newValue)
-                .createdAt(LocalDateTime.now(clock))
-                .build();
-        incidentHistoryRepository.save(event);
-    }
-
-    private static String nameOrNull(Enum<?> value) {
-        return value == null ? null : value.name();
-    }
-
-=======
     public IncidentResponse registerPhoneIncident(CreatePhoneIncidentRequest req, AuthUser user) {
         LocalDateTime now = LocalDateTime.now(clock);
 
@@ -247,6 +143,74 @@ public class IncidentService {
         return IncidentResponse.from(saved);
     }
 
+    // ---------- CU-INC-04: clasificar (categoría + prioridad) ----------
+
+    @Transactional
+    public IncidentResponse classify(Long incidentId, ClassifyIncidentRequest request, AuthUser user) {
+        Incident incident = getOwnedByAccountOr404(incidentId, user);
+        LocalDateTime now = LocalDateTime.now(clock);
+
+        IncidentCategory oldCategory = incident.getCategory();
+        if (oldCategory != request.category()) {
+            incident.setCategory(request.category());
+            recordEvent(incident, user, CATEGORY_CHANGED, nameOrNull(oldCategory),
+                    request.category().name(), now);
+        }
+
+        IncidentPriority oldPriority = incident.getPriority();
+        if (oldPriority != request.priority()) {
+            incident.setPriority(request.priority());
+            recordEvent(incident, user, PRIORITY_CHANGED, nameOrNull(oldPriority),
+                    request.priority().name(), now);
+        }
+
+        incidentRepository.save(incident);
+        return IncidentResponse.from(incident);
+    }
+
+    // ---------- CU-INC-05: marcar como urgente ----------
+
+    @Transactional
+    public IncidentResponse markUrgent(Long incidentId, AuthUser user) {
+        Incident incident = getOwnedByAccountOr404(incidentId, user);
+
+        IncidentPriority oldPriority = incident.getPriority();
+        if (oldPriority != IncidentPriority.URGENT) {
+            incident.setPriority(IncidentPriority.URGENT);
+            recordEvent(incident, user, PRIORITY_CHANGED, nameOrNull(oldPriority),
+                    IncidentPriority.URGENT.name(), LocalDateTime.now(clock));
+            incidentRepository.save(incident);
+        }
+        return IncidentResponse.from(incident);
+    }
+
+    // ---------- Corregir título / descripción ----------
+
+    @Transactional
+    public IncidentResponse correctText(Long incidentId, CorrectIncidentTextRequest request, AuthUser user) {
+        Incident incident = getOwnedByAccountOr404(incidentId, user);
+        LocalDateTime now = LocalDateTime.now(clock);
+
+        String oldDescription = incident.getDescription();
+        if (!request.description().equals(oldDescription)) {
+            incident.setDescription(request.description());
+            recordEvent(incident, user, DESCRIPTION_CHANGED, oldDescription,
+                    request.description(), now);
+        }
+
+        String newTitle = resolveTitle(request.title(), request.description());
+        String oldTitle = incident.getTitle();
+        if (!newTitle.equals(oldTitle)) {
+            incident.setTitle(newTitle);
+            recordEvent(incident, user, TITLE_CHANGED, oldTitle, newTitle, now);
+        }
+
+        incidentRepository.save(incident);
+        return IncidentResponse.from(incident);
+    }
+
+    // ---------- Helpers privados ----------
+
     private String nextIncidentCode(Account account, int year) {
         IncidentCounter counter = incidentCounterRepository
                 .findForUpdate(account.getId(), year)
@@ -267,14 +231,22 @@ public class IncidentService {
         return trimmed.length() <= 80 ? trimmed : trimmed.substring(0, 80);
     }
 
+    private String resolveTitle(String title, String description) {
+        if (title != null && !title.isBlank()) {
+            return title.trim();
+        }
+        return buildTitle(description);
+    }
+
     private String normalizeContact(String contact) {
-        if (contact == null) return null;
+        if (contact == null)
+            return null;
         String t = contact.strip();
         return t.isEmpty() ? null : t;
     }
 
     private void recordEvent(Incident incident, AuthUser actor, String eventType,
-                             String previousValue, String newValue, LocalDateTime now) {
+            String previousValue, String newValue, LocalDateTime now) {
         IncidentHistory event = IncidentHistory.builder()
                 .incident(incident)
                 .actor(userRepository.getReferenceById(actor.userId()))
@@ -285,5 +257,8 @@ public class IncidentService {
                 .build();
         incidentHistoryRepository.save(event);
     }
->>>>>>> origin/dev
+
+    private static String nameOrNull(Enum<?> value) {
+        return value == null ? null : value.name();
+    }
 }

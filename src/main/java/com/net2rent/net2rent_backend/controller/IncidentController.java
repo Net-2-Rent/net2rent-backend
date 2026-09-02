@@ -8,16 +8,12 @@ import com.net2rent.net2rent_backend.security.AuthUser;
 import com.net2rent.net2rent_backend.service.IncidentService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
-
-import jakarta.validation.Valid;
-
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -66,7 +62,7 @@ public class IncidentController {
         return ResponseEntity.created(location).body(created);
     }
 
-    @PatchMapping("/{id}/classifications")
+    @PatchMapping("/{id}/classification")
     @PreAuthorize("hasAuthority('TRIAGE_INCIDENT')")
     public IncidentResponse classify(@PathVariable Long id,
         @Valid @RequestBody ClassifyIncidentRequest request,
