@@ -1,12 +1,19 @@
 package com.net2rent.net2rent_backend.controller;
 
+import com.net2rent.net2rent_backend.dto.ClassifyIncidentRequest;
+import com.net2rent.net2rent_backend.dto.CorrectIncidentTextRequest;
 import com.net2rent.net2rent_backend.dto.IncidentResponse;
 import com.net2rent.net2rent_backend.security.AuthUser;
 import com.net2rent.net2rent_backend.service.IncidentService;
+
+import jakarta.validation.Valid;
+
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -31,8 +38,31 @@ public class IncidentController {
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public IncidentResponse getOne(@PathVariable Long id,
-                                   @AuthenticationPrincipal AuthUser user) {
+            @AuthenticationPrincipal AuthUser user) {
         return IncidentResponse.from(
                 incidentService.getOwnedByAccountOr404(id, user));
+    }
+
+    @PatchMapping("/{id}/classifications")
+    @PreAuthorize("hasAuthority('TRIAGE_INCIDENT')")
+    public IncidentResponse classify(@PathVariable Long id,
+        @Valid @RequestBody ClassifyIncidentRequest request,
+        @AuthenticationPrincipal AuthUser user) {
+            return incidentService.classify(id, request, user);
+    }
+
+    @PatchMapping("/{id}/urgent")
+    @PreAuthorize("hasAuthority('TRIAGE_INCIDENT')")
+    public IncidentResponse markUrgent(@PathVariable Long id,
+        @AuthenticationPrincipal AuthUser user) {
+            return incidentService.markUrgent(id, user);
+    }
+
+    @PatchMapping("/{id}/text")
+    @PreAuthorize("hasAuthority('TRIAGE_INCIDENT')")
+    public IncidentResponse correctText(@PathVariable Long id,
+        @Valid @RequestBody CorrectIncidentTextRequest request,
+        @AuthenticationPrincipal AuthUser user) {
+            return incidentService.correctText(id, request, user);
     }
 }
