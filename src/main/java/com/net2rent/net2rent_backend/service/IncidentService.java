@@ -2,6 +2,9 @@ package com.net2rent.net2rent_backend.service;
 
 import com.net2rent.net2rent_backend.dto.IncidentResponse;
 import com.net2rent.net2rent_backend.dto.request.CreatePhoneIncidentRequest;
+import com.net2rent.net2rent_backend.dto.request.CreateGuestIncidentRequest;
+import com.net2rent.net2rent_backend.dto.response.GuestIncidentResponse;
+import com.net2rent.net2rent_backend.security.GuestPrincipal;
 import com.net2rent.net2rent_backend.exception.ConflictException;
 import com.net2rent.net2rent_backend.exception.NotFoundException;
 import com.net2rent.net2rent_backend.model.Account;
@@ -121,12 +124,48 @@ public class IncidentService {
 
         Incident saved = incidentRepository.save(incident);
 
-        recordEvent(saved, user, "created", null, status.name(), now);
+        AppUser actorEntity = userRepository.getReferenceById(user.userId());
+        recordEvent(saved, actorEntity, "created", null, status.name(), now);
         if (assignee != null) {
-            recordEvent(saved, user, "assigned", null, assignee.getId().toString(), now);
+            recordEvent(saved, actorEntity, "assigned", null, assignee.getId().toString(), now);
         }
 
         return IncidentResponse.from(saved);
+    }
+
+    @Transactional
+    public GuestIncidentResponse registerGuestIncident(CreateGuestIncidentRequest req, GuestPrincipal guest) {
+        LocalDateTime now = LocalDateTime.now(clock);
+
+        Lodging lodging = lodgingRepository.findById(guest.lodgingId())
+                .filter(Lodging::isActive)
+                .orElseThrow(() -> new NotFoundException("Alojamiento no encontrado"));
+
+        Account account = lodging.getAccount();
+        String code = nextIncidentCode(account, now.getYear());
+
+        Incident incident = Incident.builder()
+                .account(account)
+                .code(code)
+                .source(IncidentSource.GUEST_PORTAL)
+                .status(IncidentStatus.NEW)
+                .priority(IncidentPriority.NORMAL)
+                .category(req.category())
+                .lodging(lodging)
+                .title(buildTitle(req.description()))
+                .description(req.description())
+                .guestFirstName(req.firstName())
+                .guestLastName(req.lastName())
+                .guestContact(normalizeContact(req.contact()))
+                .openedAt(now)
+                .createdAt(now)
+                .build();
+
+        Incident saved = incidentRepository.save(incident);
+
+        recordEvent(saved, null, "created", null, IncidentStatus.NEW.name(), now);
+
+        return GuestIncidentResponse.from(saved);
     }
 
     private String nextIncidentCode(Account account, int year) {
@@ -155,11 +194,11 @@ public class IncidentService {
         return t.isEmpty() ? null : t;
     }
 
-    private void recordEvent(Incident incident, AuthUser actor, String eventType,
+    private void recordEvent(Incident incident, AppUser actor, String eventType,
                              String previousValue, String newValue, LocalDateTime now) {
         IncidentHistory event = IncidentHistory.builder()
                 .incident(incident)
-                .actor(userRepository.getReferenceById(actor.userId()))
+                .actor(actor)
                 .eventType(eventType)
                 .previousValue(previousValue)
                 .newValue(newValue)
