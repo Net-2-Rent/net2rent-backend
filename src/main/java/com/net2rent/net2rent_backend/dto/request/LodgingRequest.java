@@ -20,6 +20,5 @@ public record LodgingRequest(
 
     String accessNotes
 ){
-
 }
 
