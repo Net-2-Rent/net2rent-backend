@@ -1,5 +1,6 @@
 package com.net2rent.net2rent_backend.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -22,7 +23,8 @@ public class GuestAuthController {
     }
 
     @PostMapping("/access")
-    public GuestAccessResponse access(@Valid @RequestBody GuestAccessRequest request) {
-        return guestAuthService.access(request);
+    public GuestAccessResponse access(@Valid @RequestBody GuestAccessRequest request, HttpServletRequest httpRequest) {
+        String clientIp = httpRequest.getRemoteAddr();
+        return guestAuthService.access(request, clientIp);
     }
 }

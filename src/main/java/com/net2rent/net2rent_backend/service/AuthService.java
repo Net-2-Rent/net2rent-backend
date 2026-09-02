@@ -1,20 +1,21 @@
 package com.net2rent.net2rent_backend.service;
 
 import java.time.LocalDateTime;
+import java.util.Locale;
 
 import com.net2rent.net2rent_backend.dto.ChangePasswordRequest;
 import com.net2rent.net2rent_backend.exception.ConflictException;
 import com.net2rent.net2rent_backend.dto.LoginRequest;
 import com.net2rent.net2rent_backend.dto.LoginResponse;
 import com.net2rent.net2rent_backend.exception.InvalidCredentialsException;
+import com.net2rent.net2rent_backend.exception.TooManyRequestsException;
 import com.net2rent.net2rent_backend.model.AppUser;
 import com.net2rent.net2rent_backend.repository.UserRepository;
 import com.net2rent.net2rent_backend.security.JwtService;
-import com.net2rent.net2rent_backend.security.LoginAttemptService;
+import com.net2rent.net2rent_backend.security.RateLimiter;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 
 @Service
 public class AuthService {
@@ -22,36 +23,39 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
-    private final LoginAttemptService loginAttemptService;
+    private final RateLimiter rateLimiter;
 
     public AuthService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
                        JwtService jwtService,
-                       LoginAttemptService loginAttemptService) {
+                       RateLimiter rateLimiter) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
-        this.loginAttemptService = loginAttemptService;
+        this.rateLimiter = rateLimiter;
     }
 
     @Transactional
     public LoginResponse login(LoginRequest request) {
-        String email = request.email();
 
-        loginAttemptService.assertNotBlocked(email);
+        String key = request.email().toLowerCase(Locale.ROOT);
 
-        AppUser user = userRepository.findByEmail(email).orElse(null);
+        if (rateLimiter.isBlocked(key)) {
+            throw new TooManyRequestsException();
+        }
+
+        AppUser user = userRepository.findByEmail(request.email()).orElse(null);
 
         boolean valid = user != null
                 && user.isActive()
                 && passwordEncoder.matches(request.password(), user.getPasswordHash());
 
         if (!valid) {
-            loginAttemptService.loginFailed(email);
+            rateLimiter.registerFailure(key);
             throw new InvalidCredentialsException();
         }
 
-        loginAttemptService.loginSucceeded(email);
+        rateLimiter.reset(key);
 
         user.setLastLoginAt(LocalDateTime.now());
         userRepository.save(user);
