@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -61,7 +62,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleUnexpected(
             Exception ex, HttpServletRequest request) {
-       log.error("Unexpected error handling request {}", request.getRequestURI(), ex);
+        log.error("Unexpected error handling request {}", request.getRequestURI(), ex);
         return build(HttpStatus.INTERNAL_SERVER_ERROR,
                 "Ha ocurrido un error inesperado", List.of(), request);
     }
@@ -70,6 +71,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleTooManyRequests(
             TooManyRequestsException ex, HttpServletRequest request) {
         return build(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage(), List.of(), request);
+    }
+
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ResponseEntity<ApiError> handleAuthorizationDenied(
+            AuthorizationDeniedException ex, HttpServletRequest request) {
+        return build(HttpStatus.FORBIDDEN, "No tienes permiso para realizar esta acción", List.of(), request);
     }
 
     private ResponseEntity<ApiError> build(
