@@ -1,6 +1,8 @@
 package com.net2rent.net2rent_backend.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -10,6 +12,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.time.Instant;
 import java.util.List;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -28,6 +31,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidCredentialsException.class)
     public ResponseEntity<ApiError> handleInvalidCredentials(
             InvalidCredentialsException ex, HttpServletRequest request) {
+        return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), List.of(), request);
+    }
+
+    @ExceptionHandler(InvalidGuestCredentialsException.class)
+    public ResponseEntity<ApiError> handleInvalidGuestCredentials(
+            InvalidGuestCredentialsException ex, HttpServletRequest request) {
         return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), List.of(), request);
     }
 
@@ -52,7 +61,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleUnexpected(
             Exception ex, HttpServletRequest request) {
-        // TODO: log ex here (with a logger) to keep the stack trace on the server.
+       log.error("Unexpected error handling request {}", request.getRequestURI(), ex);
         return build(HttpStatus.INTERNAL_SERVER_ERROR,
                 "Ha ocurrido un error inesperado", List.of(), request);
     }

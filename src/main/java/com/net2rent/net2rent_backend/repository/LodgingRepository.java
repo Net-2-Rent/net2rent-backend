@@ -8,6 +8,8 @@ import java.util.Optional;
 
 public interface LodgingRepository extends JpaRepository<Lodging, Long> {
 
+    Optional<Lodging> findByRef(String ref);
+
     List<Lodging> findByAccount_Id(Long accountId);
 
     Optional<Lodging> findByIdAndAccount_Id(Long id, Long accountId);
