@@ -9,6 +9,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import java.time.Instant;
 import java.util.List;
 
@@ -70,6 +71,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleTooManyRequests(
             TooManyRequestsException ex, HttpServletRequest request) {
         return build(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage(), List.of(), request);
+    }
+
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ResponseEntity<ApiError> handleAccessDenied(
+            AuthorizationDeniedException ex, HttpServletRequest request) {
+        return build(HttpStatus.FORBIDDEN,
+                "No tienes permiso para realizar esta acción", List.of(), request);
     }
 
     private ResponseEntity<ApiError> build(
