@@ -33,7 +33,7 @@ class AuthServiceTest {
     @InjectMocks private AuthService authService;
 
     @Test
-    void changepassword_updateHash_whenCurrentIsCorrect() {
+    void changePassword_updateHash_whenCurrentIsCorrect() {
         AppUser user = AppUser.builder()
                 .id(1L)
                 .passwordHash("old-hash")
