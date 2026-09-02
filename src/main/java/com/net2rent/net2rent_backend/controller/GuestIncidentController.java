@@ -25,7 +25,7 @@ public class GuestIncidentController {
     }
 
     @PostMapping("/incidents")
-    @PreAuthorize(("hasRoler('GUEST')"))
+    @PreAuthorize("hasRole('GUEST')")
     public ResponseEntity<GuestIncidentResponse> registerGuestIncident(
             @Valid @RequestBody CreateGuestIncidentRequest request,
             @AuthenticationPrincipal GuestPrincipal guest) {
