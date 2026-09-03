@@ -1,5 +1,7 @@
 package com.net2rent.net2rent_backend.service;
 
+import com.net2rent.net2rent_backend.dto.ClassifyIncidentRequest;
+import com.net2rent.net2rent_backend.dto.CorrectIncidentTextRequest;
 import com.net2rent.net2rent_backend.dto.IncidentResponse;
 import com.net2rent.net2rent_backend.dto.request.CreatePhoneIncidentRequest;
 import com.net2rent.net2rent_backend.dto.request.CreateGuestIncidentRequest;
@@ -13,6 +15,7 @@ import com.net2rent.net2rent_backend.model.Incident;
 import com.net2rent.net2rent_backend.model.IncidentCounter;
 import com.net2rent.net2rent_backend.model.IncidentHistory;
 import com.net2rent.net2rent_backend.model.Lodging;
+import com.net2rent.net2rent_backend.model.enums.IncidentCategory;
 import com.net2rent.net2rent_backend.model.enums.IncidentPriority;
 import com.net2rent.net2rent_backend.model.enums.IncidentSource;
 import com.net2rent.net2rent_backend.model.enums.IncidentStatus;
@@ -32,6 +35,12 @@ import java.util.List;
 
 @Service
 public class IncidentService {
+
+    // --- Tipos de evento del historial (triage NET-66) ---
+    private static final String CATEGORY_CHANGED = "CATEGORY_CHANGED";
+    private static final String PRIORITY_CHANGED = "PRIORITY_CHANGED";
+    private static final String TITLE_CHANGED = "TITLE_CHANGED";
+    private static final String DESCRIPTION_CHANGED = "DESCRIPTION_CHANGED";
 
     private final IncidentRepository incidentRepository;
     private final IncidentCounterRepository incidentCounterRepository;
@@ -54,6 +63,8 @@ public class IncidentService {
         this.clock = clock;
     }
 
+    // ---------- Lectura ----------
+
     @Transactional(readOnly = true)
     public List<IncidentResponse> list(AuthUser user) {
         List<Incident> incidents;
@@ -74,6 +85,8 @@ public class IncidentService {
                 .findByIdAndAccount_Id(incidentId, user.accountId())
                 .orElseThrow(() -> new NotFoundException("Incidencia no encontrada"));
     }
+
+    // ---------- Alta por teléfono ----------
 
     @Transactional
     public IncidentResponse registerPhoneIncident(CreatePhoneIncidentRequest req, AuthUser user) {
@@ -133,6 +146,77 @@ public class IncidentService {
         return IncidentResponse.from(saved);
     }
 
+    // ---------- CU-INC-04: clasificar (categoría + prioridad) ----------
+
+    @Transactional
+    public IncidentResponse classify(Long incidentId, ClassifyIncidentRequest request, AuthUser user) {
+        Incident incident = getOwnedByAccountOr404(incidentId, user);
+        LocalDateTime now = LocalDateTime.now(clock);
+        AppUser actorEntity = userRepository.getReferenceById(user.userId());
+
+        IncidentCategory oldCategory = incident.getCategory();
+        if (oldCategory != request.category()) {
+            incident.setCategory(request.category());
+            recordEvent(incident, actorEntity, CATEGORY_CHANGED, nameOrNull(oldCategory),
+                    request.category().name(), now);
+        }
+
+        IncidentPriority oldPriority = incident.getPriority();
+        if (oldPriority != request.priority()) {
+            incident.setPriority(request.priority());
+            recordEvent(incident, actorEntity, PRIORITY_CHANGED, nameOrNull(oldPriority),
+                    request.priority().name(), now);
+        }
+
+        incidentRepository.save(incident);
+        return IncidentResponse.from(incident);
+    }
+
+    // ---------- CU-INC-05: marcar como urgente ----------
+
+    @Transactional
+    public IncidentResponse markUrgent(Long incidentId, AuthUser user) {
+        Incident incident = getOwnedByAccountOr404(incidentId, user);
+
+        IncidentPriority oldPriority = incident.getPriority();
+        if (oldPriority != IncidentPriority.URGENT) {
+            incident.setPriority(IncidentPriority.URGENT);
+            AppUser actorEntity = userRepository.getReferenceById(user.userId());
+            recordEvent(incident, actorEntity, PRIORITY_CHANGED, nameOrNull(oldPriority),
+                    IncidentPriority.URGENT.name(), LocalDateTime.now(clock));
+            incidentRepository.save(incident);
+        }
+        return IncidentResponse.from(incident);
+    }
+
+    // ---------- Corregir título / descripción ----------
+
+    @Transactional
+    public IncidentResponse correctText(Long incidentId, CorrectIncidentTextRequest request, AuthUser user) {
+        Incident incident = getOwnedByAccountOr404(incidentId, user);
+        LocalDateTime now = LocalDateTime.now(clock);
+        AppUser actorEntity = userRepository.getReferenceById(user.userId());
+
+        String oldDescription = incident.getDescription();
+        if (!request.description().equals(oldDescription)) {
+            incident.setDescription(request.description());
+            recordEvent(incident, actorEntity, DESCRIPTION_CHANGED, oldDescription,
+                    request.description(), now);
+        }
+
+        String newTitle = resolveTitle(request.title(), request.description());
+        String oldTitle = incident.getTitle();
+        if (!newTitle.equals(oldTitle)) {
+            incident.setTitle(newTitle);
+            recordEvent(incident, actorEntity, TITLE_CHANGED, oldTitle, newTitle, now);
+        }
+
+        incidentRepository.save(incident);
+        return IncidentResponse.from(incident);
+    }
+
+    // ---------- Alta desde el portal del huésped ----------
+
     @Transactional
     public GuestIncidentResponse registerGuestIncident(CreateGuestIncidentRequest req, GuestPrincipal guest) {
         LocalDateTime now = LocalDateTime.now(clock);
@@ -168,6 +252,8 @@ public class IncidentService {
         return GuestIncidentResponse.from(saved);
     }
 
+    // ---------- Helpers privados ----------
+
     private String nextIncidentCode(Account account, int year) {
         IncidentCounter counter = incidentCounterRepository
                 .findForUpdate(account.getId(), year)
@@ -188,8 +274,16 @@ public class IncidentService {
         return trimmed.length() <= 80 ? trimmed : trimmed.substring(0, 80);
     }
 
+    private String resolveTitle(String title, String description) {
+        if (title != null && !title.isBlank()) {
+            return title.trim();
+        }
+        return buildTitle(description);
+    }
+
     private String normalizeContact(String contact) {
-        if (contact == null) return null;
+        if (contact == null)
+            return null;
         String t = contact.strip();
         return t.isEmpty() ? null : t;
     }
@@ -205,5 +299,9 @@ public class IncidentService {
                 .createdAt(now)
                 .build();
         incidentHistoryRepository.save(event);
+    }
+
+    private static String nameOrNull(Enum<?> value) {
+        return value == null ? null : value.name();
     }
 }
