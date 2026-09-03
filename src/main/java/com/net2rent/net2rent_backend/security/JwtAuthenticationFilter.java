@@ -56,7 +56,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             } catch (Exception e) {
                 logger.warn("Token JWT rechazado: " + e.getMessage());
-                SecurityContextHolder.clearContext();
             }
         }
         filterChain.doFilter(request, response);

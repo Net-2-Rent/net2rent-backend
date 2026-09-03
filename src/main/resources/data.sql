@@ -27,7 +27,7 @@ VALUES
 INSERT INTO lodging (id, account_id, ref, pin_hash, name, active)
 VALUES
     (1, 1, 'APT-1001',
-     '$2b$10$oPN2dLCxpahTO1Af4sFutuMmS/bt3sgJCf/SDpq78qitfdywngNzy', 'Piso Centro', true),
+     '$2b$10$1exqohd5KLJduPg8ad31buGMegBLamxg5QZ0hEYQEhTpHLnWx6OkO', 'Piso Centro', true),
     (2, 2, 'APT-2001',
-     '$2b$10$oPN2dLCxpahTO1Af4sFutuMmS/bt3sgJCf/SDpq78qitfdywngNzy', 'Piso Playa', true)
+     '$2b$10$1exqohd5KLJduPg8ad31buGMegBLamxg5QZ0hEYQEhTpHLnWx6OkO', 'Piso Playa', true)
     ON CONFLICT (id) DO NOTHING;

@@ -4,6 +4,9 @@ import com.net2rent.net2rent_backend.dto.ClassifyIncidentRequest;
 import com.net2rent.net2rent_backend.dto.CorrectIncidentTextRequest;
 import com.net2rent.net2rent_backend.dto.IncidentResponse;
 import com.net2rent.net2rent_backend.dto.request.CreatePhoneIncidentRequest;
+import com.net2rent.net2rent_backend.dto.request.CreateGuestIncidentRequest;
+import com.net2rent.net2rent_backend.dto.response.GuestIncidentResponse;
+import com.net2rent.net2rent_backend.security.GuestPrincipal;
 import com.net2rent.net2rent_backend.exception.ConflictException;
 import com.net2rent.net2rent_backend.exception.NotFoundException;
 import com.net2rent.net2rent_backend.model.Account;
@@ -46,13 +49,12 @@ public class IncidentService {
     private final UserRepository userRepository;
     private final Clock clock;
 
-    // Constructor UNIÓN: las 6 dependencias (las tuyas + las de la compi).
     public IncidentService(IncidentRepository incidentRepository,
-            IncidentCounterRepository incidentCounterRepository,
-            IncidentHistoryRepository incidentHistoryRepository,
-            LodgingRepository lodgingRepository,
-            UserRepository userRepository,
-            Clock clock) {
+                           IncidentCounterRepository incidentCounterRepository,
+                           IncidentHistoryRepository incidentHistoryRepository,
+                           LodgingRepository lodgingRepository,
+                           UserRepository userRepository,
+                           Clock clock) {
         this.incidentRepository = incidentRepository;
         this.incidentCounterRepository = incidentCounterRepository;
         this.incidentHistoryRepository = incidentHistoryRepository;
@@ -135,9 +137,10 @@ public class IncidentService {
 
         Incident saved = incidentRepository.save(incident);
 
-        recordEvent(saved, user, "created", null, status.name(), now);
+        AppUser actorEntity = userRepository.getReferenceById(user.userId());
+        recordEvent(saved, actorEntity, "created", null, status.name(), now);
         if (assignee != null) {
-            recordEvent(saved, user, "assigned", null, assignee.getId().toString(), now);
+            recordEvent(saved, actorEntity, "assigned", null, assignee.getId().toString(), now);
         }
 
         return IncidentResponse.from(saved);
@@ -149,18 +152,19 @@ public class IncidentService {
     public IncidentResponse classify(Long incidentId, ClassifyIncidentRequest request, AuthUser user) {
         Incident incident = getOwnedByAccountOr404(incidentId, user);
         LocalDateTime now = LocalDateTime.now(clock);
+        AppUser actorEntity = userRepository.getReferenceById(user.userId());
 
         IncidentCategory oldCategory = incident.getCategory();
         if (oldCategory != request.category()) {
             incident.setCategory(request.category());
-            recordEvent(incident, user, CATEGORY_CHANGED, nameOrNull(oldCategory),
+            recordEvent(incident, actorEntity, CATEGORY_CHANGED, nameOrNull(oldCategory),
                     request.category().name(), now);
         }
 
         IncidentPriority oldPriority = incident.getPriority();
         if (oldPriority != request.priority()) {
             incident.setPriority(request.priority());
-            recordEvent(incident, user, PRIORITY_CHANGED, nameOrNull(oldPriority),
+            recordEvent(incident, actorEntity, PRIORITY_CHANGED, nameOrNull(oldPriority),
                     request.priority().name(), now);
         }
 
@@ -177,7 +181,8 @@ public class IncidentService {
         IncidentPriority oldPriority = incident.getPriority();
         if (oldPriority != IncidentPriority.URGENT) {
             incident.setPriority(IncidentPriority.URGENT);
-            recordEvent(incident, user, PRIORITY_CHANGED, nameOrNull(oldPriority),
+            AppUser actorEntity = userRepository.getReferenceById(user.userId());
+            recordEvent(incident, actorEntity, PRIORITY_CHANGED, nameOrNull(oldPriority),
                     IncidentPriority.URGENT.name(), LocalDateTime.now(clock));
             incidentRepository.save(incident);
         }
@@ -190,11 +195,12 @@ public class IncidentService {
     public IncidentResponse correctText(Long incidentId, CorrectIncidentTextRequest request, AuthUser user) {
         Incident incident = getOwnedByAccountOr404(incidentId, user);
         LocalDateTime now = LocalDateTime.now(clock);
+        AppUser actorEntity = userRepository.getReferenceById(user.userId());
 
         String oldDescription = incident.getDescription();
         if (!request.description().equals(oldDescription)) {
             incident.setDescription(request.description());
-            recordEvent(incident, user, DESCRIPTION_CHANGED, oldDescription,
+            recordEvent(incident, actorEntity, DESCRIPTION_CHANGED, oldDescription,
                     request.description(), now);
         }
 
@@ -202,11 +208,48 @@ public class IncidentService {
         String oldTitle = incident.getTitle();
         if (!newTitle.equals(oldTitle)) {
             incident.setTitle(newTitle);
-            recordEvent(incident, user, TITLE_CHANGED, oldTitle, newTitle, now);
+            recordEvent(incident, actorEntity, TITLE_CHANGED, oldTitle, newTitle, now);
         }
 
         incidentRepository.save(incident);
         return IncidentResponse.from(incident);
+    }
+
+    // ---------- Alta desde el portal del huésped ----------
+
+    @Transactional
+    public GuestIncidentResponse registerGuestIncident(CreateGuestIncidentRequest req, GuestPrincipal guest) {
+        LocalDateTime now = LocalDateTime.now(clock);
+
+        Lodging lodging = lodgingRepository.findById(guest.lodgingId())
+                .filter(Lodging::isActive)
+                .orElseThrow(() -> new NotFoundException("Alojamiento no encontrado"));
+
+        Account account = lodging.getAccount();
+        String code = nextIncidentCode(account, now.getYear());
+
+        Incident incident = Incident.builder()
+                .account(account)
+                .code(code)
+                .source(IncidentSource.GUEST_PORTAL)
+                .status(IncidentStatus.NEW)
+                .priority(IncidentPriority.NORMAL)
+                .category(req.category())
+                .lodging(lodging)
+                .title(buildTitle(req.description()))
+                .description(req.description())
+                .guestFirstName(req.firstName())
+                .guestLastName(req.lastName())
+                .guestContact(normalizeContact(req.contact()))
+                .openedAt(now)
+                .createdAt(now)
+                .build();
+
+        Incident saved = incidentRepository.save(incident);
+
+        recordEvent(saved, null, "created", null, IncidentStatus.NEW.name(), now);
+
+        return GuestIncidentResponse.from(saved);
     }
 
     // ---------- Helpers privados ----------
@@ -245,11 +288,11 @@ public class IncidentService {
         return t.isEmpty() ? null : t;
     }
 
-    private void recordEvent(Incident incident, AuthUser actor, String eventType,
-            String previousValue, String newValue, LocalDateTime now) {
+    private void recordEvent(Incident incident, AppUser actor, String eventType,
+                             String previousValue, String newValue, LocalDateTime now) {
         IncidentHistory event = IncidentHistory.builder()
                 .incident(incident)
-                .actor(userRepository.getReferenceById(actor.userId()))
+                .actor(actor)
                 .eventType(eventType)
                 .previousValue(previousValue)
                 .newValue(newValue)
