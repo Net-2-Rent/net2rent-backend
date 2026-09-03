@@ -4,6 +4,7 @@ public record GuestAccessResponse(
     String token,
     Long lodgingId,
     String lodgingName,
+    String lodgingRef,
     long expiresInSeconds
 ) {
 

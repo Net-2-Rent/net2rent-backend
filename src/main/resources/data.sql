@@ -1,8 +1,15 @@
 -- Seed automático que Spring ejecuta en cada arranque (solo para desarrollo).
+
+-- 1) Cuentas
 INSERT INTO account (id, name, active)
 VALUES (1, 'net2Rent Demo', true)
 ON CONFLICT (id) DO NOTHING;
 
+INSERT INTO account (id, name, active)
+VALUES (2, 'Otra Empresa', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- 2) Usuarios
 INSERT INTO app_user (account_id, first_name, last_name, email, password_hash, role, active)
 VALUES
   (1, 'Admin',       'Demo', 'admin@net2rent.com',       '$2b$10$oPN2dLCxpahTO1Af4sFutuMmS/bt3sgJCf/SDpq78qitfdywngNzy', 'ADMIN',       true),
@@ -11,16 +18,29 @@ VALUES
   (1, 'Inactivo',    'Demo', 'inactivo@net2rent.com',    '$2b$10$oPN2dLCxpahTO1Af4sFutuMmS/bt3sgJCf/SDpq78qitfdywngNzy', 'OPERATOR',    false)
 ON CONFLICT (email) DO NOTHING;
 
--- Segunda cuenta, para probar el AISLAMIENTO entre empresas.
-INSERT INTO account (id, name, active)
-VALUES (2, 'Otra Empresa', true)
-    ON CONFLICT (id) DO NOTHING;
+INSERT INTO app_user (account_id, first_name, last_name, email, password_hash, role, active)
+VALUES
+    (2, 'Admin', 'Otra', 'admin@otraempresa.com',
+     '$2b$10$oPN2dLCxpahTO1Af4sFutuMmS/bt3sgJCf/SDpq78qitfdywngNzy', 'ADMIN', true)
+    ON CONFLICT (email) DO NOTHING;
 
--- ═══════════════════════════════════════════════════════════════
--- Incidencias de ejemplo (solo para desarrollo)
--- ═══════════════════════════════════════════════════════════════
+-- 3) Contador de códigos
+INSERT INTO incident_counter (id, account_id, year, last_number)
+VALUES
+    (1, 1, 2026, 3),
+    (2, 2, 2026, 1)
+ON CONFLICT (id) DO NOTHING;
 
--- Incidencias para APT-1001 (lodging_id=1, account_id=1)
+-- 4) Alojamiento
+INSERT INTO lodging (id, account_id, ref, pin_hash, name, active)
+VALUES
+    (1, 1, 'APT-1001',
+ '$2a$12$6a7rJB14vKRzFx/w4kWtLe1/8mp6ByGksfnjxLIHHkyN0XrTXTbTe', 'Piso Centro', true),
+(2, 2, 'APT-2001',
+ '$2a$12$6a7rJB14vKRzFx/w4kWtLe1/8mp6ByGksfnjxLIHHkyN0XrTXTbTe', 'Piso Playa', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- 5) Incidencias
 INSERT INTO incident (id, account_id, lodging_id, code, title, description,
                       category, priority, source, status,
                       guest_first_name, guest_last_name, guest_contact,
@@ -45,7 +65,6 @@ VALUES
      '2026-08-20 14:00:00', '2026-08-20 14:00:00')
 ON CONFLICT (id) DO NOTHING;
 
--- Incidencia para APT-2001 (lodging_id=2, account_id=2) — para probar aislamiento
 INSERT INTO incident (id, account_id, lodging_id, code, title, description,
                       category, priority, source, status,
                       guest_first_name, guest_last_name, guest_contact,
@@ -57,26 +76,3 @@ VALUES
      'Pedro', 'Sánchez', 'pedro@email.com',
      '2026-08-23 11:00:00', '2026-08-23 11:00:00')
 ON CONFLICT (id) DO NOTHING;
-
--- Contador de códigos por cuenta y año (para que la generación automática funcione)
-INSERT INTO incident_counter (id, account_id, year, last_number)
-VALUES
-    (1, 1, 2026, 3),
-    (2, 2, 2026, 1)
-ON CONFLICT (id) DO NOTHING;
-
--- Un admin en la cuenta 2 (reutilizo el mismo hash que ya usáis).
-INSERT INTO app_user (account_id, first_name, last_name, email, password_hash, role, active)
-VALUES
-    (2, 'Admin', 'Otra', 'admin@otraempresa.com',
-     '$2b$10$oPN2dLCxpahTO1Af4sFutuMmS/bt3sgJCf/SDpq78qitfdywngNzy', 'ADMIN', true)
-    ON CONFLICT (email) DO NOTHING;
-
--- Un alojamiento en CADA cuenta, con id conocido para los tests.
-INSERT INTO lodging (id, account_id, ref, pin_hash, name, active)
-VALUES
-    (1, 1, 'APT-1001',
-     '$2b$10$oPN2dLCxpahTO1Af4sFutuMmS/bt3sgJCf/SDpq78qitfdywngNzy', 'Piso Centro', true),
-    (2, 2, 'APT-2001',
-     '$2b$10$oPN2dLCxpahTO1Af4sFutuMmS/bt3sgJCf/SDpq78qitfdywngNzy', 'Piso Playa', true)
-    ON CONFLICT (id) DO NOTHING;

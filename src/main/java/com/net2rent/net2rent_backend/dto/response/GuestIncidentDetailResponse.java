@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import com.net2rent.net2rent_backend.model.Incident;
 
 public record GuestIncidentDetailResponse(
+        Long id,
         String code,
         String description,
         String status,
@@ -12,6 +13,7 @@ public record GuestIncidentDetailResponse(
 ) {
     public static GuestIncidentDetailResponse from(Incident i) {
         return new GuestIncidentDetailResponse(
+                i.getId(),
                 i.getCode(),
                 i.getDescription(),
                 i.getStatus() == null ? null : i.getStatus().name(),
