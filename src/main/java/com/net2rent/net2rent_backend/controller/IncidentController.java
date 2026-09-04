@@ -1,18 +1,28 @@
 package com.net2rent.net2rent_backend.controller;
 
+import com.net2rent.net2rent_backend.dto.ClassifyIncidentRequest;
+import com.net2rent.net2rent_backend.dto.CorrectIncidentTextRequest;
 import com.net2rent.net2rent_backend.dto.IncidentResponse;
 import com.net2rent.net2rent_backend.dto.response.GuestIncidentDetailResponse;
 import com.net2rent.net2rent_backend.dto.response.GuestIncidentSummaryResponse;
+import com.net2rent.net2rent_backend.dto.request.CreatePhoneIncidentRequest;
 import com.net2rent.net2rent_backend.security.AuthUser;
 import com.net2rent.net2rent_backend.security.GuestAuthentication;
 import com.net2rent.net2rent_backend.service.IncidentService;
+import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.util.List;
 
 @RestController
@@ -36,7 +46,7 @@ public class IncidentController {
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public IncidentResponse getOne(@PathVariable Long id,
-                                   @AuthenticationPrincipal AuthUser user) {
+            @AuthenticationPrincipal AuthUser user) {
         return IncidentResponse.from(
                 incidentService.getOwnedByAccountOr404(id, user));
     }
@@ -55,5 +65,43 @@ public class IncidentController {
             @AuthenticationPrincipal GuestAuthentication guest) {
         return GuestIncidentDetailResponse.from(
                 incidentService.getOwnedByLodgingOr404(id, guest.getLodgingId()));
+        }
+    @PostMapping
+    @PreAuthorize("hasAuthority('REGISTER_PHONE_INCIDENT')")
+    public ResponseEntity<IncidentResponse> registerPhoneIncident(
+            @Valid @RequestBody CreatePhoneIncidentRequest request,
+            @AuthenticationPrincipal AuthUser user) {
+
+        IncidentResponse created = incidentService.registerPhoneIncident(request, user);
+
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(created.id())
+                .toUri();
+
+        return ResponseEntity.created(location).body(created);
+    }
+
+    @PatchMapping("/{id}/classification")
+    @PreAuthorize("hasAuthority('TRIAGE_INCIDENT')")
+    public IncidentResponse classify(@PathVariable Long id,
+        @Valid @RequestBody ClassifyIncidentRequest request,
+        @AuthenticationPrincipal AuthUser user) {
+            return incidentService.classify(id, request, user);
+    }
+
+    @PatchMapping("/{id}/urgent")
+    @PreAuthorize("hasAuthority('TRIAGE_INCIDENT')")
+    public IncidentResponse markUrgent(@PathVariable Long id,
+        @AuthenticationPrincipal AuthUser user) {
+            return incidentService.markUrgent(id, user);
+    }
+
+    @PatchMapping("/{id}/text")
+    @PreAuthorize("hasAuthority('TRIAGE_INCIDENT')")
+    public IncidentResponse correctText(@PathVariable Long id,
+        @Valid @RequestBody CorrectIncidentTextRequest request,
+        @AuthenticationPrincipal AuthUser user) {
+            return incidentService.correctText(id, request, user);
     }
 }
