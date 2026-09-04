@@ -24,16 +24,18 @@ VALUES
     ON CONFLICT (email) DO NOTHING;
 
 -- Un alojamiento en CADA cuenta, con id conocido para los tests.
+-- NOTE: pin_hash below is the BCrypt hash of "1234" (a valid 4-digit guest PIN).
+-- It must NOT reuse the app_user password hash above, since that hash
+-- encodes an 8-character password ("Test1234"), which no 4-digit PIN
+-- typed by a guest can ever match against the /api/guest/access endpoint.
 INSERT INTO lodging (id, account_id, ref, pin_hash, name, active)
 VALUES
     (1, 1, 'APT-1001',
-     '$2b$10$oPN2dLCxpahTO1Af4sFutuMmS/bt3sgJCf/SDpq78qitfdywngNzy', 'Piso Centro', true),
+     '$2b$10$MopfZBtzYsaZBitO/yRCD.TN52O0uqwYq0XZaBPKR6m3iEYjwp8Du', 'Piso Centro', true),
     (2, 2, 'APT-2001',
-     '$2b$10$oPN2dLCxpahTO1Af4sFutuMmS/bt3sgJCf/SDpq78qitfdywngNzy', 'Piso Playa', true)
+     '$2b$10$MopfZBtzYsaZBitO/yRCD.TN52O0uqwYq0XZaBPKR6m3iEYjwp8Du', 'Piso Playa', true)
     ON CONFLICT (id) DO NOTHING;
     
-
-    SELECT setval('lodging_id_seq', (SELECT COALESCE(MAX(id), 1) FROM lodging));
 
 -- Sync the "lodging" sequence with the highest id inserted above.
 -- Needed because the INSERTs in this seed use explicit ids (1, 2), which
@@ -41,3 +43,4 @@ VALUES
 -- this line, the first lodging created from the app collides with
 -- "duplicate key value violates unique constraint lodging_pkey", because
 -- Postgres tries to reuse id=1, which already exists from the seed.
+SELECT setval('lodging_id_seq', (SELECT COALESCE(MAX(id), 1) FROM lodging));
