@@ -9,6 +9,7 @@ public record GuestIncidentDetailResponse(
         String description,
         String status,
         LocalDateTime openedAt,
+        LocalDateTime resolvedAt,
         LocalDateTime closedAt
 ) {
     public static GuestIncidentDetailResponse from(Incident i) {
@@ -18,6 +19,7 @@ public record GuestIncidentDetailResponse(
                 i.getDescription(),
                 i.getStatus() == null ? null : i.getStatus().name(),
                 i.getOpenedAt(),
+                i.getResolvedAt(),
                 i.getClosedAt()
         );
     }
