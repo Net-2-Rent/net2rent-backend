@@ -9,7 +9,10 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 @Entity
-@Table(name = "incident_counter")
+@Table(
+        name = "incident_counter",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"account_id", "counter_year"})
+)
 public class IncidentCounter {
 
     @Id
@@ -20,10 +23,9 @@ public class IncidentCounter {
     @JoinColumn(name = "account_id", nullable = false)
     private Account account;
 
-    @Column(nullable = false)
+    @Column(name = "counter_year", nullable = false)
     private Integer year;
 
     @Column(nullable = false)
     private Integer lastNumber;
-
 }

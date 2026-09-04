@@ -40,7 +40,7 @@ public class AuthController {
     }
 
     @PatchMapping("/password")
-    @PreAuthorize("hasAuthority('MANAGE_USERS')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> changePassword(
             @AuthenticationPrincipal AuthUser user,
             @Valid @RequestBody ChangePasswordRequest request) {

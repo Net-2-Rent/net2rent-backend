@@ -74,9 +74,10 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(AuthorizationDeniedException.class)
-    public ResponseEntity<ApiError> handleAuthorizationDenied(
+    public ResponseEntity<ApiError> handleAccessDenied(
             AuthorizationDeniedException ex, HttpServletRequest request) {
-        return build(HttpStatus.FORBIDDEN, "No tienes permiso para realizar esta acción", List.of(), request);
+        return build(HttpStatus.FORBIDDEN,
+                "No tienes permiso para realizar esta acción", List.of(), request);
     }
 
     private ResponseEntity<ApiError> build(
