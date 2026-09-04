@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.net2rent.net2rent_backend.dto.LoginRequest;
+import com.net2rent.net2rent_backend.dto.request.CreateCommentRequest;
 import com.net2rent.net2rent_backend.dto.request.CreatePhoneIncidentRequest;
 import com.net2rent.net2rent_backend.model.enums.IncidentCategory;
 import com.net2rent.net2rent_backend.model.enums.IncidentPriority;
@@ -129,5 +130,85 @@ class IncidentIntegrationTest {
                         .content(json(validRequest(1L, operatorId))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value("ASSIGNED"));
+    }
+
+    @Test
+    void timeline_returnsEventsInOrder_forOwnedIncident() throws Exception {
+        String token = loginAndGetToken("admin@net2rent.com", "Test1234");
+
+        MvcResult ops = mockMvc.perform(get("/api/users/operators")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk()).andReturn();
+        JsonNode operators = objectMapper.readTree(ops.getResponse().getContentAsString());
+        Long operatorId = Long.valueOf(operators.get(0).get("id").asString());
+
+        MvcResult created = mockMvc.perform(post("/api/incidents")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(validRequest(1L, operatorId))))
+                .andExpect(status().isCreated())
+                .andReturn();
+        long id = Long.parseLong(
+                objectMapper.readTree(created.getResponse().getContentAsString())
+                        .get("id").asString());
+
+        mockMvc.perform(get("/api/incidents/" + id + "/timeline")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].type").value("EVENT"))
+                .andExpect(jsonPath("$[0].eventType").value("CREATED"))
+                .andExpect(jsonPath("$[1].eventType").value("ASSIGNED"));
+    }
+
+    @Test
+    void addComment_thenTimeline_showsCommentInterleavedWithEvents() throws Exception {
+        String token = loginAndGetToken("admin@net2rent.com", "Test1234");
+
+        MvcResult created = mockMvc.perform(post("/api/incidents")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(validRequest(1L, null))))
+                .andExpect(status().isCreated())
+                .andReturn();
+        long id = Long.parseLong(
+                objectMapper.readTree(created.getResponse().getContentAsString())
+                        .get("id").asString());
+
+        String commentBody = objectMapper.writeValueAsString(
+                new CreateCommentRequest("Contactado el propietario, envío operario mañana"));
+        mockMvc.perform(post("/api/incidents/" + id + "/comments")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(commentBody))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.type").value("COMMENT"))
+                .andExpect(jsonPath("$.text").value("Contactado el propietario, envío operario mañana"));
+
+        mockMvc.perform(get("/api/incidents/" + id + "/timeline")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].type").value("EVENT"))
+                .andExpect(jsonPath("$[0].eventType").value("CREATED"))
+                .andExpect(jsonPath("$[1].type").value("COMMENT"));
+    }
+
+    @Test
+    void emptyComment_returns409() throws Exception {
+        String token = loginAndGetToken("admin@net2rent.com", "Test1234");
+        long id = Long.parseLong(objectMapper.readTree(
+                        mockMvc.perform(post("/api/incidents")
+                                        .header("Authorization", "Bearer " + token)
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content(json(validRequest(1L, null))))
+                                .andReturn().getResponse().getContentAsString())
+                .get("id").asString());
+
+        mockMvc.perform(post("/api/incidents/" + id + "/comments")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\":\"\"}"))
+                .andExpect(status().isConflict());
     }
 }

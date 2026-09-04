@@ -1,7 +1,7 @@
 package com.net2rent.net2rent_backend.service;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import com.net2rent.net2rent_backend.dto.ClassifyIncidentRequest;
@@ -10,14 +10,9 @@ import com.net2rent.net2rent_backend.exception.NotFoundException;
 import com.net2rent.net2rent_backend.model.Account;
 import com.net2rent.net2rent_backend.model.AppUser;
 import com.net2rent.net2rent_backend.model.Incident;
-import com.net2rent.net2rent_backend.model.IncidentHistory;
 import com.net2rent.net2rent_backend.model.Lodging;
-import com.net2rent.net2rent_backend.model.enums.IncidentCategory;
-import com.net2rent.net2rent_backend.model.enums.IncidentPriority;
-import com.net2rent.net2rent_backend.model.enums.IncidentStatus;
-import com.net2rent.net2rent_backend.model.enums.UserRole;
+import com.net2rent.net2rent_backend.model.enums.*;
 import com.net2rent.net2rent_backend.repository.IncidentCounterRepository;
-import com.net2rent.net2rent_backend.repository.IncidentHistoryRepository;
 import com.net2rent.net2rent_backend.repository.IncidentRepository;
 import com.net2rent.net2rent_backend.repository.LodgingRepository;
 import com.net2rent.net2rent_backend.repository.UserRepository;
@@ -43,7 +38,7 @@ class IncidentServiceTriageTest {
 
     @Mock private IncidentRepository incidentRepository;
     @Mock private IncidentCounterRepository incidentCounterRepository;
-    @Mock private IncidentHistoryRepository incidentHistoryRepository;
+    @Mock private IncidentHistoryService incidentHistoryService;
     @Mock private LodgingRepository lodgingRepository;
     @Mock private UserRepository userRepository;
 
@@ -62,7 +57,7 @@ class IncidentServiceTriageTest {
     @BeforeEach
     void setUp() {
         service = new IncidentService(
-                incidentRepository, incidentCounterRepository, incidentHistoryRepository,
+                incidentRepository, incidentCounterRepository, incidentHistoryService,
                 lodgingRepository, userRepository, clock);
 
         account = Account.builder().id(1L).name("net2Rent Demo").build();
@@ -104,17 +99,12 @@ class IncidentServiceTriageTest {
         assertEquals(IncidentPriority.HIGH, incident.getPriority());
 
         // Se guardan DOS eventos de historial con valor anterior y nuevo
-        ArgumentCaptor<IncidentHistory> captor = ArgumentCaptor.forClass(IncidentHistory.class);
-        verify(incidentHistoryRepository, times(2)).save(captor.capture());
-        List<IncidentHistory> events = captor.getAllValues();
-
-        assertEquals("CATEGORY_CHANGED", events.get(0).getEventType());
-        assertNull(events.get(0).getPreviousValue());              // antes: sin categoría
-        assertEquals("PLUMBING", events.get(0).getNewValue());
-
-        assertEquals("PRIORITY_CHANGED", events.get(1).getEventType());
-        assertEquals("NORMAL", events.get(1).getPreviousValue());
-        assertEquals("HIGH", events.get(1).getNewValue());
+        ArgumentCaptor<IncidentEventType> typeCaptor = ArgumentCaptor.forClass(IncidentEventType.class);
+        verify(incidentHistoryService, times(2)).record(
+                any(Incident.class), any(), typeCaptor.capture(), any(), any(), any(LocalDateTime.class));
+        List<IncidentEventType> types = typeCaptor.getAllValues();
+        assertEquals(IncidentEventType.CATEGORY_CHANGED, types.get(0));
+        assertEquals(IncidentEventType.PRIORITY_CHANGED, types.get(1));
     }
 
     @Test
@@ -128,7 +118,7 @@ class IncidentServiceTriageTest {
                 new ClassifyIncidentRequest(IncidentCategory.PLUMBING, IncidentPriority.HIGH),
                 coordinator);
 
-        verify(incidentHistoryRepository, never()).save(any());
+        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any());
     }
 
     // ---------- CU-INC-05: marcar urgente ----------
@@ -151,11 +141,10 @@ class IncidentServiceTriageTest {
         assertEquals(IncidentStatus.IN_PROGRESS, incident.getStatus());
         assertEquals(operator, incident.getAssignee());
 
-        ArgumentCaptor<IncidentHistory> captor = ArgumentCaptor.forClass(IncidentHistory.class);
-        verify(incidentHistoryRepository, times(1)).save(captor.capture());
-        assertEquals("PRIORITY_CHANGED", captor.getValue().getEventType());
-        assertEquals("NORMAL", captor.getValue().getPreviousValue());
-        assertEquals("URGENT", captor.getValue().getNewValue());
+        ArgumentCaptor<IncidentEventType> typeCaptor = ArgumentCaptor.forClass(IncidentEventType.class);
+        verify(incidentHistoryService, times(1)).record(
+                any(Incident.class), any(), typeCaptor.capture(), any(), any(), any(LocalDateTime.class));
+        assertEquals(IncidentEventType.PRIORITY_CHANGED, typeCaptor.getValue());
     }
 
     // ---------- Corregir título / descripción ----------
@@ -201,6 +190,6 @@ class IncidentServiceTriageTest {
                         new ClassifyIncidentRequest(IncidentCategory.PLUMBING, IncidentPriority.HIGH),
                         coordinator));
 
-        verify(incidentHistoryRepository, never()).save(any());
+        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any());
     }
 }

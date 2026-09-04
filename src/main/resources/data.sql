@@ -25,7 +25,7 @@ VALUES
     ON CONFLICT (email) DO NOTHING;
 
 -- 3) Contador de códigos
-INSERT INTO incident_counter (id, account_id, year, last_number)
+INSERT INTO incident_counter (id, account_id, counter_year, last_number)
 VALUES
     (1, 1, 2026, 3),
     (2, 2, 2026, 1)

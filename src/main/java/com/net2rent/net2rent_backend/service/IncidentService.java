@@ -15,15 +15,14 @@ import com.net2rent.net2rent_backend.model.Account;
 import com.net2rent.net2rent_backend.model.AppUser;
 import com.net2rent.net2rent_backend.model.Incident;
 import com.net2rent.net2rent_backend.model.IncidentCounter;
-import com.net2rent.net2rent_backend.model.IncidentHistory;
 import com.net2rent.net2rent_backend.model.Lodging;
 import com.net2rent.net2rent_backend.model.enums.IncidentCategory;
+import com.net2rent.net2rent_backend.model.enums.IncidentEventType;
 import com.net2rent.net2rent_backend.model.enums.IncidentPriority;
 import com.net2rent.net2rent_backend.model.enums.IncidentSource;
 import com.net2rent.net2rent_backend.model.enums.IncidentStatus;
 import com.net2rent.net2rent_backend.model.enums.UserRole;
 import com.net2rent.net2rent_backend.repository.IncidentCounterRepository;
-import com.net2rent.net2rent_backend.repository.IncidentHistoryRepository;
 import com.net2rent.net2rent_backend.repository.IncidentRepository;
 import com.net2rent.net2rent_backend.repository.LodgingRepository;
 import com.net2rent.net2rent_backend.repository.UserRepository;
@@ -38,28 +37,22 @@ import java.util.List;
 @Service
 public class IncidentService {
 
-    // --- Tipos de evento del historial (triage NET-66) ---
-    private static final String CATEGORY_CHANGED = "CATEGORY_CHANGED";
-    private static final String PRIORITY_CHANGED = "PRIORITY_CHANGED";
-    private static final String TITLE_CHANGED = "TITLE_CHANGED";
-    private static final String DESCRIPTION_CHANGED = "DESCRIPTION_CHANGED";
-
     private final IncidentRepository incidentRepository;
     private final IncidentCounterRepository incidentCounterRepository;
-    private final IncidentHistoryRepository incidentHistoryRepository;
+    private final IncidentHistoryService incidentHistoryService; // ← nuevo
     private final LodgingRepository lodgingRepository;
     private final UserRepository userRepository;
     private final Clock clock;
 
     public IncidentService(IncidentRepository incidentRepository,
                            IncidentCounterRepository incidentCounterRepository,
-                           IncidentHistoryRepository incidentHistoryRepository,
+                           IncidentHistoryService incidentHistoryService, // ← nuevo
                            LodgingRepository lodgingRepository,
                            UserRepository userRepository,
                            Clock clock) {
         this.incidentRepository = incidentRepository;
         this.incidentCounterRepository = incidentCounterRepository;
-        this.incidentHistoryRepository = incidentHistoryRepository;
+        this.incidentHistoryService = incidentHistoryService;
         this.lodgingRepository = lodgingRepository;
         this.userRepository = userRepository;
         this.clock = clock;
@@ -153,9 +146,11 @@ public class IncidentService {
         Incident saved = incidentRepository.save(incident);
 
         AppUser actorEntity = userRepository.getReferenceById(user.userId());
-        recordEvent(saved, actorEntity, "created", null, status.name(), now);
+        incidentHistoryService.record(saved, actorEntity, IncidentEventType.CREATED,
+                null, status.name(), now);
         if (assignee != null) {
-            recordEvent(saved, actorEntity, "assigned", null, assignee.getId().toString(), now);
+            incidentHistoryService.record(saved, actorEntity, IncidentEventType.ASSIGNED,
+                    null, assignee.getId().toString(), now);
         }
 
         return IncidentResponse.from(saved);
@@ -172,15 +167,15 @@ public class IncidentService {
         IncidentCategory oldCategory = incident.getCategory();
         if (oldCategory != request.category()) {
             incident.setCategory(request.category());
-            recordEvent(incident, actorEntity, CATEGORY_CHANGED, nameOrNull(oldCategory),
-                    request.category().name(), now);
+            incidentHistoryService.record(incident, actorEntity, IncidentEventType.CATEGORY_CHANGED,
+                    nameOrNull(oldCategory), request.category().name(), now);
         }
 
         IncidentPriority oldPriority = incident.getPriority();
         if (oldPriority != request.priority()) {
             incident.setPriority(request.priority());
-            recordEvent(incident, actorEntity, PRIORITY_CHANGED, nameOrNull(oldPriority),
-                    request.priority().name(), now);
+            incidentHistoryService.record(incident, actorEntity, IncidentEventType.PRIORITY_CHANGED,
+                    nameOrNull(oldPriority), request.priority().name(), now);
         }
 
         incidentRepository.save(incident);
@@ -197,8 +192,8 @@ public class IncidentService {
         if (oldPriority != IncidentPriority.URGENT) {
             incident.setPriority(IncidentPriority.URGENT);
             AppUser actorEntity = userRepository.getReferenceById(user.userId());
-            recordEvent(incident, actorEntity, PRIORITY_CHANGED, nameOrNull(oldPriority),
-                    IncidentPriority.URGENT.name(), LocalDateTime.now(clock));
+            incidentHistoryService.record(incident, actorEntity, IncidentEventType.PRIORITY_CHANGED,
+                    nameOrNull(oldPriority), IncidentPriority.URGENT.name(), LocalDateTime.now(clock));
             incidentRepository.save(incident);
         }
         return IncidentResponse.from(incident);
@@ -215,15 +210,16 @@ public class IncidentService {
         String oldDescription = incident.getDescription();
         if (!request.description().equals(oldDescription)) {
             incident.setDescription(request.description());
-            recordEvent(incident, actorEntity, DESCRIPTION_CHANGED, oldDescription,
-                    request.description(), now);
+            incidentHistoryService.record(incident, actorEntity, IncidentEventType.DESCRIPTION_CHANGED,
+                    oldDescription, request.description(), now);
         }
 
         String newTitle = resolveTitle(request.title(), request.description());
         String oldTitle = incident.getTitle();
         if (!newTitle.equals(oldTitle)) {
             incident.setTitle(newTitle);
-            recordEvent(incident, actorEntity, TITLE_CHANGED, oldTitle, newTitle, now);
+            incidentHistoryService.record(incident, actorEntity, IncidentEventType.TITLE_CHANGED,
+                    oldTitle, newTitle, now);
         }
 
         incidentRepository.save(incident);
@@ -262,7 +258,9 @@ public class IncidentService {
 
         Incident saved = incidentRepository.save(incident);
 
-        recordEvent(saved, null, "created", null, IncidentStatus.NEW.name(), now);
+        // actor = null → evento de sistema (el huésped no es un AppUser)
+        incidentHistoryService.record(saved, null, IncidentEventType.CREATED,
+                null, IncidentStatus.NEW.name(), now);
 
         return GuestIncidentResponse.from(saved);
     }
@@ -301,19 +299,6 @@ public class IncidentService {
             return null;
         String t = contact.strip();
         return t.isEmpty() ? null : t;
-    }
-
-    private void recordEvent(Incident incident, AppUser actor, String eventType,
-                             String previousValue, String newValue, LocalDateTime now) {
-        IncidentHistory event = IncidentHistory.builder()
-                .incident(incident)
-                .actor(actor)
-                .eventType(eventType)
-                .previousValue(previousValue)
-                .newValue(newValue)
-                .createdAt(now)
-                .build();
-        incidentHistoryRepository.save(event);
     }
 
     private static String nameOrNull(Enum<?> value) {
