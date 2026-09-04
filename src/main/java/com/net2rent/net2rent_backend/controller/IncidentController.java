@@ -3,8 +3,11 @@ package com.net2rent.net2rent_backend.controller;
 import com.net2rent.net2rent_backend.dto.ClassifyIncidentRequest;
 import com.net2rent.net2rent_backend.dto.CorrectIncidentTextRequest;
 import com.net2rent.net2rent_backend.dto.IncidentResponse;
+import com.net2rent.net2rent_backend.dto.response.GuestIncidentDetailResponse;
+import com.net2rent.net2rent_backend.dto.response.GuestIncidentSummaryResponse;
 import com.net2rent.net2rent_backend.dto.request.CreatePhoneIncidentRequest;
 import com.net2rent.net2rent_backend.security.AuthUser;
+import com.net2rent.net2rent_backend.security.GuestAuthentication;
 import com.net2rent.net2rent_backend.service.IncidentService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -32,6 +35,8 @@ public class IncidentController {
         this.incidentService = incidentService;
     }
 
+    // === STAFF ENDPOINTS ===
+
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public List<IncidentResponse> list(@AuthenticationPrincipal AuthUser user) {
@@ -46,6 +51,21 @@ public class IncidentController {
                 incidentService.getOwnedByAccountOr404(id, user));
     }
 
+    @GetMapping("/guest")
+    @PreAuthorize("isAuthenticated()")
+    public List<GuestIncidentSummaryResponse> guestList(
+            @AuthenticationPrincipal GuestAuthentication guest) {
+        return incidentService.listByLodging(guest.getLodgingId());
+    }
+
+    @GetMapping("/guest/{id}")
+    @PreAuthorize("isAuthenticated()")
+    public GuestIncidentDetailResponse guestDetail(
+            @PathVariable Long id,
+            @AuthenticationPrincipal GuestAuthentication guest) {
+        return GuestIncidentDetailResponse.from(
+                incidentService.getOwnedByLodgingOr404(id, guest.getLodgingId()));
+        }
     @PostMapping
     @PreAuthorize("hasAuthority('REGISTER_PHONE_INCIDENT')")
     public ResponseEntity<IncidentResponse> registerPhoneIncident(

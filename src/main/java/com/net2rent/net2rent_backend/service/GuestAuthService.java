@@ -53,7 +53,6 @@ public class GuestAuthService {
         rateLimiter.reset(clientIp);
 
         String token = guestTokenService.generateToken(lodging);
-        return new GuestAccessResponse(token, lodging.getId(), lodging.getName(), lodging.getAddress(),
-                EXPIRES_IN_SECONDS);
+        return new GuestAccessResponse(token, lodging.getId(), lodging.getName(), lodging.getRef(), lodging.getAddress(), EXPIRES_IN_SECONDS);
     }
 }
