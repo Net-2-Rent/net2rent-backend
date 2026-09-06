@@ -24,27 +24,6 @@ VALUES
      '$2b$10$oPN2dLCxpahTO1Af4sFutuMmS/bt3sgJCf/SDpq78qitfdywngNzy', 'ADMIN', true)
     ON CONFLICT (email) DO NOTHING;
 
--- Un alojamiento en CADA cuenta, con id conocido para los tests.
--- NOTE: pin_hash below is the BCrypt hash of "1234" (a valid 4-digit guest PIN).
--- It must NOT reuse the app_user password hash above, since that hash
--- encodes an 8-character password ("Test1234"), which no 4-digit PIN
--- typed by a guest can ever match against the /api/guest/access endpoint.
-INSERT INTO lodging (id, account_id, ref, pin_hash, name, active)
-VALUES
-    (1, 1, 'APT-1001',
-     '$2b$10$1exqohd5KLJduPg8ad31buGMegBLamxg5QZ0hEYQEhTpHLnWx6OkO', 'Piso Centro', true),
-    (2, 2, 'APT-2001',
-     '$2b$10$1exqohd5KLJduPg8ad31buGMegBLamxg5QZ0hEYQEhTpHLnWx6OkO', 'Piso Playa', true)
-    ON CONFLICT (id) DO NOTHING;
-
-
--- Sync the "lodging" sequence with the highest id inserted above.
--- Needed because the INSERTs in this seed use explicit ids (1, 2), which
--- does not advance Postgres's internal sequence (lodging_id_seq). Without
--- this line, the first lodging created from the app collides with
--- "duplicate key value violates unique constraint lodging_pkey", because
--- Postgres tries to reuse id=1, which already exists from the seed.
-SELECT setval('lodging_id_seq', (SELECT COALESCE(MAX(id), 1) FROM lodging));
 -- 3) Contador de códigos
 INSERT INTO incident_counter (id, account_id, counter_year, last_number)
 VALUES
