@@ -20,5 +20,9 @@ public interface IncidentRepository extends JpaRepository<Incident, Long> {
                 and (i.assignee.id = :userId or i.assignee is null)
             """)
     List<Incident> findVisibleToOperator(@Param("accountId") Long accountId,
-                                         @Param("userId") Long userId);
+            @Param("userId") Long userId);
+
+    List<Incident> findByLodging_IdOrderByOpenedAtDesc(Long lodgingId);
+
+    Optional<Incident> findByIdAndLodging_Id(Long id, Long lodgingId);
 }
