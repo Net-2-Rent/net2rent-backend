@@ -74,10 +74,16 @@ INSERT INTO incident (id, account_id, lodging_id, code, title, description,
                       guest_first_name, guest_last_name, guest_contact,
                       opened_at, created_at, resolved_at, closed_at)
 VALUES
-    (4, 2, 2, 'INC-2026-000004', 'Cerradura de la puerta principal',
+(4, 2, 2, 'INC-2026-000099', 'Cerradura de la puerta principal',
      'La cerradura de la puerta principal está difícil de girar con la llave.',
      'LOCKSMITH', 'HIGH', 'GUEST_PORTAL', 'NEW',
      'Pedro', 'Sánchez', 'pedro@email.com',
      '2026-08-23 11:00:00', '2026-08-23 11:00:00',
      NULL, NULL)
 ON CONFLICT (id) DO NOTHING;
+
+-- Resincroniza las secuencias tras insertar IDs explícitos en el seed
+SELECT setval(pg_get_serial_sequence('account', 'id'), COALESCE((SELECT MAX(id) FROM account), 1));
+SELECT setval(pg_get_serial_sequence('lodging', 'id'), COALESCE((SELECT MAX(id) FROM lodging), 1));
+SELECT setval(pg_get_serial_sequence('incident', 'id'), COALESCE((SELECT MAX(id) FROM incident), 1));
+SELECT setval(pg_get_serial_sequence('incident_counter', 'id'), COALESCE((SELECT MAX(id) FROM incident_counter), 1));
