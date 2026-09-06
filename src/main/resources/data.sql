@@ -32,12 +32,12 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- 4) Alojamiento
-INSERT INTO lodging (id, account_id, ref, pin_hash, name, active)
+INSERT INTO lodging (id, account_id, ref, pin_hash, name, address, active)
 VALUES
     (1, 1, 'APT-1001',
- '$2a$12$6a7rJB14vKRzFx/w4kWtLe1/8mp6ByGksfnjxLIHHkyN0XrTXTbTe', 'Piso Centro', true),
+ '$2a$12$6a7rJB14vKRzFx/w4kWtLe1/8mp6ByGksfnjxLIHHkyN0XrTXTbTe', 'Piso Centro', 'Calle Mayor 12, 3ºB', true),
 (2, 2, 'APT-2001',
- '$2a$12$6a7rJB14vKRzFx/w4kWtLe1/8mp6ByGksfnjxLIHHkyN0XrTXTbTe', 'Piso Playa', true)
+ '$2a$12$6a7rJB14vKRzFx/w4kWtLe1/8mp6ByGksfnjxLIHHkyN0XrTXTbTe', 'Piso Playa', 'Paseo Marítimo 25, 1ºA', true)
 ON CONFLICT (id) DO NOTHING;
 
 -- 5) Incidencias APT-1001 (account 1)

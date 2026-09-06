@@ -100,6 +100,9 @@ public class Incident {
     private List<IncidentComment> comments;
 
     @OneToMany(mappedBy = "incident", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<IncidentHistory> history; 
+    private List<IncidentHistory> history;
+
+    @OneToMany(mappedBy = "incident", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<IncidentImage> images;
 
 }

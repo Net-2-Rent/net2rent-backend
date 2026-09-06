@@ -39,22 +39,24 @@ public class IncidentService {
 
     private final IncidentRepository incidentRepository;
     private final IncidentCounterRepository incidentCounterRepository;
-    private final IncidentHistoryService incidentHistoryService; // ← nuevo
+    private final IncidentHistoryService incidentHistoryService;
     private final LodgingRepository lodgingRepository;
     private final UserRepository userRepository;
+    private final IncidentImageService incidentImageService;
     private final Clock clock;
 
     public IncidentService(IncidentRepository incidentRepository,
                            IncidentCounterRepository incidentCounterRepository,
-                           IncidentHistoryService incidentHistoryService, // ← nuevo
+                           IncidentHistoryService incidentHistoryService,
                            LodgingRepository lodgingRepository,
-                           UserRepository userRepository,
+                           UserRepository userRepository, IncidentImageService incidentImageService,
                            Clock clock) {
         this.incidentRepository = incidentRepository;
         this.incidentCounterRepository = incidentCounterRepository;
         this.incidentHistoryService = incidentHistoryService;
         this.lodgingRepository = lodgingRepository;
         this.userRepository = userRepository;
+        this.incidentImageService = incidentImageService;
         this.clock = clock;
     }
 
@@ -256,9 +258,9 @@ public class IncidentService {
                 .createdAt(now)
                 .build();
 
+        incident.setImages(incidentImageService.buildImages(req.images(), incident, now));
         Incident saved = incidentRepository.save(incident);
 
-        // actor = null → evento de sistema (el huésped no es un AppUser)
         incidentHistoryService.record(saved, null, IncidentEventType.CREATED,
                 null, IncidentStatus.NEW.name(), now);
 
