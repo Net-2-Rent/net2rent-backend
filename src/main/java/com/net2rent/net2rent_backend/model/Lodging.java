@@ -1,6 +1,7 @@
 package com.net2rent.net2rent_backend.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 
 @Getter
@@ -29,6 +30,8 @@ public class Lodging {
     @Column(nullable = false)
     private String name;
 
+    @NotBlank
+    @Column(nullable = false)
     private String address;
 
     @Column(columnDefinition = "TEXT")
