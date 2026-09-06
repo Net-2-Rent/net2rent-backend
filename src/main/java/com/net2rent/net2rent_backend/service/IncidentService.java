@@ -93,9 +93,10 @@ public class IncidentService {
 
     @Transactional(readOnly = true)
     public Incident getOwnedByLodgingOr404(Long incidentId, Long lodgingId) {
-        return incidentRepository.findByIdAndLodging_Id(incidentId, lodgingId)
+        return incidentRepository.findByIdAndLodging_IdWithImages(incidentId, lodgingId)
                 .orElseThrow(() -> new NotFoundException("Incidencia no encontrada"));
     }
+
     // ---------- Alta por teléfono ----------
 
     @Transactional

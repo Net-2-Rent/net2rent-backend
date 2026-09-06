@@ -25,4 +25,11 @@ public interface IncidentRepository extends JpaRepository<Incident, Long> {
     List<Incident> findByLodging_IdOrderByOpenedAtDesc(Long lodgingId);
 
     Optional<Incident> findByIdAndLodging_Id(Long id, Long lodgingId);
+
+    @Query("""
+        select distinct i from Incident i
+        left join fetch i.images
+        where i.id = :id and i.lodging.id = :lodgingId
+        """)
+    Optional<Incident> findByIdAndLodging_IdWithImages(@Param("id") Long id, @Param("lodgingId") Long lodgingId);
 }
