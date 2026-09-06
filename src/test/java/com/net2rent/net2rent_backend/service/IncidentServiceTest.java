@@ -1,7 +1,7 @@
 package com.net2rent.net2rent_backend.service;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import com.net2rent.net2rent_backend.dto.IncidentResponse;
@@ -11,13 +11,8 @@ import com.net2rent.net2rent_backend.dto.response.GuestIncidentResponse;
 import com.net2rent.net2rent_backend.exception.ConflictException;
 import com.net2rent.net2rent_backend.exception.NotFoundException;
 import com.net2rent.net2rent_backend.model.*;
-import com.net2rent.net2rent_backend.model.enums.IncidentCategory;
-import com.net2rent.net2rent_backend.model.enums.IncidentPriority;
-import com.net2rent.net2rent_backend.model.enums.IncidentSource;
-import com.net2rent.net2rent_backend.model.enums.IncidentStatus;
-import com.net2rent.net2rent_backend.model.enums.UserRole;
+import com.net2rent.net2rent_backend.model.enums.*;
 import com.net2rent.net2rent_backend.repository.IncidentCounterRepository;
-import com.net2rent.net2rent_backend.repository.IncidentHistoryRepository;
 import com.net2rent.net2rent_backend.repository.IncidentRepository;
 import com.net2rent.net2rent_backend.repository.LodgingRepository;
 import com.net2rent.net2rent_backend.repository.UserRepository;
@@ -42,7 +37,7 @@ class IncidentServiceTest {
 
     @Mock private IncidentRepository incidentRepository;
     @Mock private IncidentCounterRepository incidentCounterRepository;
-    @Mock private IncidentHistoryRepository incidentHistoryRepository;
+    @Mock private IncidentHistoryService incidentHistoryService;
     @Mock private LodgingRepository lodgingRepository;
     @Mock private UserRepository userRepository;
 
@@ -60,7 +55,7 @@ class IncidentServiceTest {
     @BeforeEach
     void setUp() {
         service = new IncidentService(
-                incidentRepository, incidentCounterRepository, incidentHistoryRepository,
+                incidentRepository, incidentCounterRepository, incidentHistoryService,
                 lodgingRepository, userRepository, clock);
 
         account = Account.builder().id(1L).name("net2Rent Demo").build();
@@ -103,7 +98,7 @@ class IncidentServiceTest {
         assertEquals(LocalDateTime.of(2026, 9, 1, 9, 0), saved.getOpenedAt());
         assertEquals("No hay luz en el salón desde ayer", saved.getTitle());
 
-        verify(incidentHistoryRepository, times(1)).save(any());
+        verify(incidentHistoryService, times(1)).record(any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -129,7 +124,7 @@ class IncidentServiceTest {
         assertNotNull(saved.getAssignee());
         assertEquals(LocalDateTime.of(2026, 9, 2, 8, 0), saved.getAssignedAt());
 
-        verify(incidentHistoryRepository, times(2)).save(any());
+        verify(incidentHistoryService, times(2)).record(any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -193,8 +188,9 @@ class IncidentServiceTest {
         assertNull(saved.getAssignee());
 
         ArgumentCaptor<IncidentHistory> historyCaptor = ArgumentCaptor.forClass(IncidentHistory.class);
-        verify(incidentHistoryRepository, times(1)).save(historyCaptor.capture());
-        assertNull(historyCaptor.getValue().getActor());
+        verify(incidentHistoryService, times(1)).record(
+                any(Incident.class), isNull(), eq(IncidentEventType.CREATED),
+                isNull(), eq(IncidentStatus.NEW.name()), any(LocalDateTime.class));
     }
 
     @Test
