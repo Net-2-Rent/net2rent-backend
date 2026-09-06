@@ -9,6 +9,8 @@ import com.net2rent.net2rent_backend.dto.request.CreateGuestIncidentRequest;
 import com.net2rent.net2rent_backend.dto.request.GuestAccessRequest;
 import com.net2rent.net2rent_backend.model.enums.IncidentCategory;
 
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -53,7 +55,7 @@ class GuestIncidentIntegrationTest {
     private CreateGuestIncidentRequest validRequest() {
         return new CreateGuestIncidentRequest(
                 "Ana", "López", null, IncidentCategory.ELECTRICITY,
-                "No hay luz en el salón desde ayer");
+                "No hay luz en el salón desde ayer", List.of());
     }
 
     @Test
@@ -90,7 +92,7 @@ class GuestIncidentIntegrationTest {
     @Test
     void missingRequiredFields_returns409() throws Exception {
         String token = guestAccessAndGetToken("APT-1001", "1234");
-        CreateGuestIncidentRequest empty = new CreateGuestIncidentRequest("", "", null, null, "");
+        CreateGuestIncidentRequest empty = new CreateGuestIncidentRequest("", "", null, null, "", List.of());
 
         mockMvc.perform(post("/api/guest/incidents")
                         .header("Authorization", "Bearer " + token)
@@ -103,7 +105,7 @@ class GuestIncidentIntegrationTest {
     void withoutCategory_returns201() throws Exception {
         String token = guestAccessAndGetToken("APT-1001", "1234");
         CreateGuestIncidentRequest noCategory = new CreateGuestIncidentRequest(
-                "Ana", "López", null, null, "No hay luz en el salón desde ayer");
+                "Ana", "López", null, null, "No hay luz en el salón desde ayer", List.of());
 
         mockMvc.perform(post("/api/guest/incidents")
                         .header("Authorization", "Bearer " + token)
