@@ -81,7 +81,7 @@ public class IncidentController {
             @PathVariable Long id,
             @AuthenticationPrincipal GuestPrincipal guest) {
         return GuestIncidentDetailResponse.from(
-                incidentService.getOwnedByLodgingOr404(id, guest.LodgingId()));
+                incidentService.getOwnedByLodgingOr404(id, guest.lodgingId()));
     }
 
     @PostMapping
