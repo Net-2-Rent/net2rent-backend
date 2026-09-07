@@ -15,6 +15,8 @@ public record IncidentResponse(
                 String guestLastName,
                 String guestContact,
                 String lodgingRef,
+                String lodgingName,
+                String lodgingAddress,
                 String lodgingAccessNotes,
                 String assigneeName,
                 LocalDateTime openedAt) {
@@ -35,6 +37,8 @@ public record IncidentResponse(
                                 i.getGuestLastName(),
                                 i.getGuestContact(),
                                 i.getLodging() == null ? null : i.getLodging().getRef(),
+                                i.getLodging() == null ? null : i.getLodging().getName(),
+                                i.getLodging() == null ? null : i.getLodging().getAddress(),
                                 i.getLodging() == null ? null : i.getLodging().getAccessNotes(),
                                 assigneeName,
                                 i.getOpenedAt());
