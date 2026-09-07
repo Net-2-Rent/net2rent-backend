@@ -10,6 +10,7 @@ public record IncidentResponse(
         String priority,
         String category,
         String title,
+        String description,
         String lodgingRef,
         String assigneeName,
         LocalDateTime openedAt
@@ -26,6 +27,7 @@ public record IncidentResponse(
                 i.getPriority() == null ? null : i.getPriority().name(),
                 i.getCategory() == null ? null : i.getCategory().name(),
                 i.getTitle(),
+                i.getDescription(),
                 i.getLodging()  == null ? null : i.getLodging().getRef(),
                 assigneeName,
                 i.getOpenedAt()
