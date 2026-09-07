@@ -51,6 +51,8 @@ class IncidentResponseTest {
 
         assertEquals("APT-1001", response.lodgingRef());
         assertEquals("Llave bajo el felpudo. Código del portal: 4477.", response.lodgingAccessNotes());
+        assertEquals("Ana", response.guestFirstName());
+        assertEquals("López", response.guestLastName());
     }
 
     @Test
