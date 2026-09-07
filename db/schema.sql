@@ -504,3 +504,10 @@ ALTER TABLE ONLY public.app_user
 --
 -- PostgreSQL database dump complete
 --
+
+ALTER TABLE public.incident_checklist_item
+    ADD COLUMN IF NOT EXISTS checked_by_id bigint,
+    ADD COLUMN IF NOT EXISTS checked_at timestamp(6) without time zone;
+
+ALTER TABLE public.incident_checklist_item
+    ADD CONSTRAINT fk_checklist_item_checked_by FOREIGN KEY (checked_by_id) REFERENCES public.app_user(id);

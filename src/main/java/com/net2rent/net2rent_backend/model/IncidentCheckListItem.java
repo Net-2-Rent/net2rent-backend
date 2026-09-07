@@ -3,6 +3,8 @@ package com.net2rent.net2rent_backend.model;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -27,4 +29,9 @@ public class IncidentCheckListItem {
     @Builder.Default
     private boolean done = false;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "checked_by_id")
+    private AppUser checkedBy;
+
+    private LocalDateTime checkedAt;
 }
