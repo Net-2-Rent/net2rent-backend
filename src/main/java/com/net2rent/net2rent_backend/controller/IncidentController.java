@@ -3,8 +3,11 @@ package com.net2rent.net2rent_backend.controller;
 import com.net2rent.net2rent_backend.dto.ClassifyIncidentRequest;
 import com.net2rent.net2rent_backend.dto.CorrectIncidentTextRequest;
 import com.net2rent.net2rent_backend.dto.IncidentResponse;
+import com.net2rent.net2rent_backend.dto.request.CreateChecklistItemRequest;
 import com.net2rent.net2rent_backend.dto.request.CreateCommentRequest;
 import com.net2rent.net2rent_backend.dto.request.IncidentFilter;
+import com.net2rent.net2rent_backend.dto.request.UpdateChecklistItemRequest;
+import com.net2rent.net2rent_backend.dto.response.ChecklistItemResponse;
 import com.net2rent.net2rent_backend.dto.response.GuestIncidentDetailResponse;
 import com.net2rent.net2rent_backend.dto.response.GuestIncidentSummaryResponse;
 import com.net2rent.net2rent_backend.dto.request.CreatePhoneIncidentRequest;
@@ -15,6 +18,7 @@ import com.net2rent.net2rent_backend.model.enums.IncidentPriority;
 import com.net2rent.net2rent_backend.model.enums.IncidentStatus;
 import com.net2rent.net2rent_backend.repository.spec.SortField;
 import com.net2rent.net2rent_backend.security.AuthUser;
+import com.net2rent.net2rent_backend.service.IncidentChecklistService;
 import com.net2rent.net2rent_backend.service.IncidentCommentService;
 import com.net2rent.net2rent_backend.security.GuestPrincipal;
 import com.net2rent.net2rent_backend.service.IncidentService;
@@ -28,6 +32,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -49,12 +54,16 @@ public class IncidentController {
     private final IncidentService incidentService;
     private final IncidentTimelineService incidentTimelineService;
     private final IncidentCommentService incidentCommentService;
+    private final IncidentChecklistService incidentChecklistService;
 
-    public IncidentController(IncidentService incidentService, IncidentTimelineService incidentTimelineService,
-                              IncidentCommentService incidentCommentService) {
+    public IncidentController(IncidentService incidentService,
+                              IncidentTimelineService incidentTimelineService,
+                              IncidentCommentService incidentCommentService,
+                              IncidentChecklistService incidentChecklistService) {
         this.incidentService = incidentService;
         this.incidentTimelineService = incidentTimelineService;
         this.incidentCommentService = incidentCommentService;
+        this.incidentChecklistService = incidentChecklistService;
     }
 
     @GetMapping
@@ -82,7 +91,7 @@ public class IncidentController {
 
         int safeSize = Math.clamp(size, 1, 100);
         int safePage = Math.max(page, 0);
-        
+
         Pageable pageable = PageRequest.of(safePage, safeSize);
 
         return incidentService.list(filter, sortField, direction, pageable, user);
@@ -165,5 +174,43 @@ public class IncidentController {
             @AuthenticationPrincipal AuthUser user) {
         TimelineItemResponse created = incidentCommentService.addComment(id, request, user);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    @GetMapping("/{id}/checklist")
+    @PreAuthorize("hasAuthority('MANAGE_CHECKLIST')")
+    public List<ChecklistItemResponse> listChecklist(
+            @PathVariable Long id,
+            @AuthenticationPrincipal AuthUser user) {
+        return incidentChecklistService.list(id, user);
+    }
+
+    @PostMapping("/{id}/checklist")
+    @PreAuthorize("hasAuthority('MANAGE_CHECKLIST')")
+    public ResponseEntity<ChecklistItemResponse> addChecklistItem(
+            @PathVariable Long id,
+            @Valid @RequestBody CreateChecklistItemRequest request,
+            @AuthenticationPrincipal AuthUser user) {
+        ChecklistItemResponse created = incidentChecklistService.addItem(id, request, user);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    @PatchMapping("/{id}/checklist/{itemId}")
+    @PreAuthorize("hasAuthority('MANAGE_CHECKLIST')")
+    public ChecklistItemResponse setChecklistItemDone(
+            @PathVariable Long id,
+            @PathVariable Long itemId,
+            @Valid @RequestBody UpdateChecklistItemRequest request,
+            @AuthenticationPrincipal AuthUser user) {
+        return incidentChecklistService.setDone(id, itemId, request, user);
+    }
+
+    @DeleteMapping("/{id}/checklist/{itemId}")
+    @PreAuthorize("hasAuthority('MANAGE_CHECKLIST')")
+    public ResponseEntity<Void> deleteChecklistItem(
+            @PathVariable Long id,
+            @PathVariable Long itemId,
+            @AuthenticationPrincipal AuthUser user) {
+        incidentChecklistService.deleteItem(id, itemId, user);
+        return ResponseEntity.noContent().build();
     }
 }

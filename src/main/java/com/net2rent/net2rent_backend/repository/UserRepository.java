@@ -7,6 +7,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface UserRepository extends JpaRepository<AppUser, Long> {
     Optional<AppUser> findByEmail(String email);
+
     Optional<AppUser> findByIdAndAccount_Id(Long id, Long accountId);
+
     List<AppUser> findByAccount_IdAndRoleAndActiveTrueOrderByFirstNameAsc(Long accountId, UserRole role);
+
+    List<AppUser> findByAccount_IdOrderByFirstNameAsc(Long accountId);
+
+    long countByAccount_IdAndRoleAndActiveTrue(Long accountId, UserRole role);
 }
