@@ -22,6 +22,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 
 import com.net2rent.net2rent_backend.security.GuestPrincipal;
@@ -40,6 +41,7 @@ class IncidentServiceTest {
     @Mock private IncidentHistoryService incidentHistoryService;
     @Mock private LodgingRepository lodgingRepository;
     @Mock private UserRepository userRepository;
+    @Mock private IncidentImageService incidentImageService;
 
     private IncidentService service;
 
@@ -56,7 +58,7 @@ class IncidentServiceTest {
     void setUp() {
         service = new IncidentService(
                 incidentRepository, incidentCounterRepository, incidentHistoryService,
-                lodgingRepository, userRepository, clock);
+                lodgingRepository, userRepository, incidentImageService, clock);
 
         account = Account.builder().id(1L).name("net2Rent Demo").build();
         activeLodging = Lodging.builder()
@@ -172,7 +174,7 @@ class IncidentServiceTest {
 
         GuestPrincipal guest = new GuestPrincipal(1L);
         CreateGuestIncidentRequest req = new CreateGuestIncidentRequest(
-                "Ana", "López", null, IncidentCategory.ELECTRICITY, "No hay luz en el salón desde ayer");
+                "Ana", "López", null, IncidentCategory.ELECTRICITY, "No hay luz en el salón desde ayer", List.of());
 
         GuestIncidentResponse res = service.registerGuestIncident(req, guest);
 
@@ -202,7 +204,7 @@ class IncidentServiceTest {
 
         GuestPrincipal guest = new GuestPrincipal(1L);
         CreateGuestIncidentRequest req = new CreateGuestIncidentRequest(
-                "Ana", "López", null, null, "No hay luz en el salón desde ayer");
+                "Ana", "López", null, null, "No hay luz en el salón desde ayer", List.of());
 
         service.registerGuestIncident(req, guest);
 
@@ -217,7 +219,7 @@ class IncidentServiceTest {
 
         GuestPrincipal guest = new GuestPrincipal(1L);
         CreateGuestIncidentRequest req = new CreateGuestIncidentRequest(
-                "Ana", "López", null, null, "No hay luz en el salón desde ayer");
+                "Ana", "López", null, null, "No hay luz en el salón desde ayer", List.of());
 
         assertThrows(NotFoundException.class, () -> service.registerGuestIncident(req, guest));
 
@@ -232,7 +234,7 @@ class IncidentServiceTest {
 
         GuestPrincipal guest = new GuestPrincipal(1L);
         CreateGuestIncidentRequest req = new CreateGuestIncidentRequest(
-                "Ana", "López", null, null, "No hay luz en el salón desde ayer");
+                "Ana", "López", null, null, "No hay luz en el salón desde ayer", List.of());
 
         assertThrows(NotFoundException.class, () -> service.registerGuestIncident(req, guest));
 

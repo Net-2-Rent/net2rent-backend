@@ -12,6 +12,7 @@ import com.net2rent.net2rent_backend.repository.IncidentRepository;
 import com.net2rent.net2rent_backend.security.GuestPrincipal;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,7 +37,7 @@ class IncidentHistoryRollbackTest {
     void event_isRolledBack_whenSurroundingTransactionFails() {
         incidentService.registerGuestIncident(
                 new CreateGuestIncidentRequest("Ana", "López", null,
-                        IncidentCategory.ELECTRICITY, "No hay luz en el salón desde ayer"),
+                        IncidentCategory.ELECTRICITY, "No hay luz en el salón desde ayer", List.of()),
                 new GuestPrincipal(1L));
 
         Incident incident = incidentRepository.findAll().get(0);

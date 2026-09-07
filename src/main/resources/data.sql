@@ -24,27 +24,6 @@ VALUES
      '$2b$10$oPN2dLCxpahTO1Af4sFutuMmS/bt3sgJCf/SDpq78qitfdywngNzy', 'ADMIN', true)
     ON CONFLICT (email) DO NOTHING;
 
--- Un alojamiento en CADA cuenta, con id conocido para los tests.
--- NOTE: pin_hash below is the BCrypt hash of "1234" (a valid 4-digit guest PIN).
--- It must NOT reuse the app_user password hash above, since that hash
--- encodes an 8-character password ("Test1234"), which no 4-digit PIN
--- typed by a guest can ever match against the /api/guest/access endpoint.
-INSERT INTO lodging (id, account_id, ref, pin_hash, name, active)
-VALUES
-    (1, 1, 'APT-1001',
-     '$2b$10$1exqohd5KLJduPg8ad31buGMegBLamxg5QZ0hEYQEhTpHLnWx6OkO', 'Piso Centro', true),
-    (2, 2, 'APT-2001',
-     '$2b$10$1exqohd5KLJduPg8ad31buGMegBLamxg5QZ0hEYQEhTpHLnWx6OkO', 'Piso Playa', true)
-    ON CONFLICT (id) DO NOTHING;
-
-
--- Sync the "lodging" sequence with the highest id inserted above.
--- Needed because the INSERTs in this seed use explicit ids (1, 2), which
--- does not advance Postgres's internal sequence (lodging_id_seq). Without
--- this line, the first lodging created from the app collides with
--- "duplicate key value violates unique constraint lodging_pkey", because
--- Postgres tries to reuse id=1, which already exists from the seed.
-SELECT setval('lodging_id_seq', (SELECT COALESCE(MAX(id), 1) FROM lodging));
 -- 3) Contador de códigos
 INSERT INTO incident_counter (id, account_id, counter_year, last_number)
 VALUES
@@ -53,12 +32,12 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- 4) Alojamiento
-INSERT INTO lodging (id, account_id, ref, pin_hash, name, active)
+INSERT INTO lodging (id, account_id, ref, pin_hash, name, address, active)
 VALUES
     (1, 1, 'APT-1001',
- '$2a$12$6a7rJB14vKRzFx/w4kWtLe1/8mp6ByGksfnjxLIHHkyN0XrTXTbTe', 'Piso Centro', true),
+ '$2a$12$6a7rJB14vKRzFx/w4kWtLe1/8mp6ByGksfnjxLIHHkyN0XrTXTbTe', 'Piso Centro', 'Calle Mayor 12, 3ºB', true),
 (2, 2, 'APT-2001',
- '$2a$12$6a7rJB14vKRzFx/w4kWtLe1/8mp6ByGksfnjxLIHHkyN0XrTXTbTe', 'Piso Playa', true)
+ '$2a$12$6a7rJB14vKRzFx/w4kWtLe1/8mp6ByGksfnjxLIHHkyN0XrTXTbTe', 'Piso Playa', 'Paseo Marítimo 25, 1ºA', true)
 ON CONFLICT (id) DO NOTHING;
 
 -- 5) Incidencias APT-1001 (account 1)
@@ -95,10 +74,16 @@ INSERT INTO incident (id, account_id, lodging_id, code, title, description,
                       guest_first_name, guest_last_name, guest_contact,
                       opened_at, created_at, resolved_at, closed_at)
 VALUES
-    (4, 2, 2, 'INC-2026-000004', 'Cerradura de la puerta principal',
+(4, 2, 2, 'INC-2026-000099', 'Cerradura de la puerta principal',
      'La cerradura de la puerta principal está difícil de girar con la llave.',
      'LOCKSMITH', 'HIGH', 'GUEST_PORTAL', 'NEW',
      'Pedro', 'Sánchez', 'pedro@email.com',
      '2026-08-23 11:00:00', '2026-08-23 11:00:00',
      NULL, NULL)
 ON CONFLICT (id) DO NOTHING;
+
+-- Resincroniza las secuencias tras insertar IDs explícitos en el seed
+SELECT setval(pg_get_serial_sequence('account', 'id'), COALESCE((SELECT MAX(id) FROM account), 1));
+SELECT setval(pg_get_serial_sequence('lodging', 'id'), COALESCE((SELECT MAX(id) FROM lodging), 1));
+SELECT setval(pg_get_serial_sequence('incident', 'id'), COALESCE((SELECT MAX(id) FROM incident), 1));
+SELECT setval(pg_get_serial_sequence('incident_counter', 'id'), COALESCE((SELECT MAX(id) FROM incident_counter), 1));

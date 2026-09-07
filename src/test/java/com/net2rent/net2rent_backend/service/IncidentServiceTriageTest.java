@@ -41,6 +41,7 @@ class IncidentServiceTriageTest {
     @Mock private IncidentHistoryService incidentHistoryService;
     @Mock private LodgingRepository lodgingRepository;
     @Mock private UserRepository userRepository;
+    @Mock private IncidentImageService incidentImageService;
 
     private IncidentService service;
 
@@ -58,7 +59,7 @@ class IncidentServiceTriageTest {
     void setUp() {
         service = new IncidentService(
                 incidentRepository, incidentCounterRepository, incidentHistoryService,
-                lodgingRepository, userRepository, clock);
+                lodgingRepository, userRepository, incidentImageService, clock);
 
         account = Account.builder().id(1L).name("net2Rent Demo").build();
         lodging = Lodging.builder()
