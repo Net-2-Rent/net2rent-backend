@@ -3,11 +3,14 @@ package com.net2rent.net2rent_backend.service;
 import com.net2rent.net2rent_backend.dto.ClassifyIncidentRequest;
 import com.net2rent.net2rent_backend.dto.CorrectIncidentTextRequest;
 import com.net2rent.net2rent_backend.dto.IncidentResponse;
-import com.net2rent.net2rent_backend.dto.response.GuestIncidentDetailResponse;
+import com.net2rent.net2rent_backend.dto.request.IncidentFilter;
 import com.net2rent.net2rent_backend.dto.response.GuestIncidentSummaryResponse;
 import com.net2rent.net2rent_backend.dto.request.CreatePhoneIncidentRequest;
 import com.net2rent.net2rent_backend.dto.request.CreateGuestIncidentRequest;
 import com.net2rent.net2rent_backend.dto.response.GuestIncidentResponse;
+import com.net2rent.net2rent_backend.dto.response.IncidentListResponse;
+import com.net2rent.net2rent_backend.dto.response.IncidentSummaryResponse;
+import com.net2rent.net2rent_backend.dto.response.PagedResponse;
 import com.net2rent.net2rent_backend.security.GuestPrincipal;
 import com.net2rent.net2rent_backend.exception.ConflictException;
 import com.net2rent.net2rent_backend.exception.NotFoundException;
@@ -26,13 +29,21 @@ import com.net2rent.net2rent_backend.repository.IncidentCounterRepository;
 import com.net2rent.net2rent_backend.repository.IncidentRepository;
 import com.net2rent.net2rent_backend.repository.LodgingRepository;
 import com.net2rent.net2rent_backend.repository.UserRepository;
+import com.net2rent.net2rent_backend.repository.spec.IncidentSpecifications;
+import com.net2rent.net2rent_backend.repository.spec.SortField;
 import com.net2rent.net2rent_backend.security.AuthUser;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class IncidentService {
@@ -63,17 +74,46 @@ public class IncidentService {
     // ---------- Lectura ----------
 
     @Transactional(readOnly = true)
-    public List<IncidentResponse> list(AuthUser user) {
-        List<Incident> incidents;
+    public IncidentListResponse list(IncidentFilter filter,
+                                     SortField sortField,
+                                     Sort.Direction direction,
+                                     Pageable pageable,
+                                     AuthUser user) {
+        Long operatorUserId = UserRole.OPERATOR.name().equals(user.role())
+                ? user.userId()
+                : null;
 
-        if (UserRole.OPERATOR.name().equals(user.role())) {
-            incidents = incidentRepository.findVisibleToOperator(
-                    user.accountId(), user.userId());
-        } else {
-            incidents = incidentRepository.findByAccount_Id(user.accountId());
+        Specification<Incident> filterSpec =
+                IncidentSpecifications.forListing(user.accountId(), filter, operatorUserId);
+
+        Page<Incident> page = incidentRepository.findAll(
+                filterSpec.and(IncidentSpecifications.orderBy(sortField, direction)),
+                pageable);
+
+        List<IncidentSummaryResponse> content = page.getContent().stream()
+                .map(IncidentSummaryResponse::from)
+                .toList();
+
+        return new IncidentListResponse(
+                PagedResponse.of(content, page),
+                countByStatus(filterSpec));
+    }
+
+    // Header counters (CU-LST-05): the 5 OPEN states, over the same filters as the page.
+    private Map<IncidentStatus, Long> countByStatus(Specification<Incident> filterSpec) {
+        List<IncidentStatus> headerStatuses = List.of(
+                IncidentStatus.NEW,
+                IncidentStatus.ASSIGNED,
+                IncidentStatus.IN_PROGRESS,
+                IncidentStatus.PAUSED,
+                IncidentStatus.RESOLVED);
+
+        Map<IncidentStatus, Long> counters = new LinkedHashMap<>();
+        for (IncidentStatus status : headerStatuses) {
+            counters.put(status,
+                    incidentRepository.count(filterSpec.and(IncidentSpecifications.hasStatus(status))));
         }
-
-        return incidents.stream().map(IncidentResponse::from).toList();
+        return counters;
     }
 
     @Transactional(readOnly = true)

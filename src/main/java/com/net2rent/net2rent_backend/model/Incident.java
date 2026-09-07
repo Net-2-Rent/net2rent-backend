@@ -7,15 +7,16 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.util.List;
 
-
-
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @Entity
-@Table(name = "incident", uniqueConstraints = @UniqueConstraint(columnNames = "code"))
+@Table(name = "incident",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_incident_account_code",
+                columnNames = {"account_id", "code"}))
 public class Incident {
 
    @Id
@@ -26,7 +27,7 @@ public class Incident {
     @JoinColumn(name = "account_id", nullable = false)
     private Account account;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String code;
 
     @Enumerated(EnumType.STRING)
