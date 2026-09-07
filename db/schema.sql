@@ -137,6 +137,8 @@ CREATE TABLE public.incident_checklist_item (
     done boolean NOT NULL,
     id bigint NOT NULL,
     incident_id bigint NOT NULL,
+    checked_by_id bigint,
+    checked_at timestamp(6) without time zone,
     text character varying(200) NOT NULL
 );
 
@@ -468,6 +470,12 @@ ALTER TABLE ONLY public.incident_history
 ALTER TABLE ONLY public.incident_checklist_item
     ADD CONSTRAINT fkgeklwt74009srsrwyi312wmrf FOREIGN KEY (incident_id) REFERENCES public.incident(id);
 
+--
+-- Name: incident_checklist_item fk_checklist_item_checked_by; Type: FK CONSTRAINT; Schema: public
+--
+
+ALTER TABLE ONLY public.incident_checklist_item
+    ADD CONSTRAINT fk_checklist_item_checked_by FOREIGN KEY (checked_by_id) REFERENCES public.app_user(id);
 
 --
 -- TOC entry 4928 (class 2606 OID 18339)
@@ -537,10 +545,3 @@ ALTER TABLE ONLY public.incident_image
 
 ALTER TABLE public.lodging
     ALTER COLUMN address SET NOT NULL;
-
-ALTER TABLE public.incident_checklist_item
-    ADD COLUMN IF NOT EXISTS checked_by_id bigint,
-    ADD COLUMN IF NOT EXISTS checked_at timestamp(6) without time zone;
-
-ALTER TABLE public.incident_checklist_item
-    ADD CONSTRAINT fk_checklist_item_checked_by FOREIGN KEY (checked_by_id) REFERENCES public.app_user(id);
