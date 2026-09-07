@@ -59,7 +59,6 @@ class IncidentListIntegrationTest {
     }
 
     // Creates an incident via the phone endpoint and returns its id.
-    // Creates an incident via the phone endpoint and returns its id.
     private long createIncident(String token, Long lodgingId, IncidentPriority priority, Long assigneeId)
             throws Exception {
         CreatePhoneIncidentRequest req = new CreatePhoneIncidentRequest(
@@ -75,7 +74,6 @@ class IncidentListIntegrationTest {
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
-                .andDo(org.springframework.test.web.servlet.result.MockMvcResultHandlers.print()) // <-- TEMPORAL
                 .andExpect(status().isCreated()).andReturn();
         return Long.parseLong(
                 objectMapper.readTree(res.getResponse().getContentAsString()).get("id").asString());
