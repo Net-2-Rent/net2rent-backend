@@ -11,6 +11,7 @@ import com.net2rent.net2rent_backend.dto.response.GuestIncidentDetailResponse;
 import com.net2rent.net2rent_backend.dto.response.GuestIncidentSummaryResponse;
 import com.net2rent.net2rent_backend.dto.request.CreatePhoneIncidentRequest;
 import com.net2rent.net2rent_backend.dto.response.TimelineItemResponse;
+import com.net2rent.net2rent_backend.dto.RejectIncidentRequest;
 import com.net2rent.net2rent_backend.security.AuthUser;
 import com.net2rent.net2rent_backend.service.IncidentChecklistService;
 import com.net2rent.net2rent_backend.service.IncidentCommentService;
@@ -46,9 +47,9 @@ public class IncidentController {
     private final IncidentChecklistService incidentChecklistService;
 
     public IncidentController(IncidentService incidentService,
-                              IncidentTimelineService incidentTimelineService,
-                              IncidentCommentService incidentCommentService,
-                              IncidentChecklistService incidentChecklistService) {
+            IncidentTimelineService incidentTimelineService,
+            IncidentCommentService incidentCommentService,
+            IncidentChecklistService incidentChecklistService) {
         this.incidentService = incidentService;
         this.incidentTimelineService = incidentTimelineService;
         this.incidentCommentService = incidentCommentService;
@@ -64,7 +65,7 @@ public class IncidentController {
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public IncidentResponse getOne(@PathVariable Long id,
-                                   @AuthenticationPrincipal AuthUser user) {
+            @AuthenticationPrincipal AuthUser user) {
         return incidentService.getDetail(id, user);
     }
 
@@ -103,25 +104,33 @@ public class IncidentController {
     @PatchMapping("/{id}/classification")
     @PreAuthorize("hasAuthority('TRIAGE_INCIDENT')")
     public IncidentResponse classify(@PathVariable Long id,
-                                     @Valid @RequestBody ClassifyIncidentRequest request,
-                                     @AuthenticationPrincipal AuthUser user) {
+            @Valid @RequestBody ClassifyIncidentRequest request,
+            @AuthenticationPrincipal AuthUser user) {
         return incidentService.classify(id, request, user);
     }
 
     @PatchMapping("/{id}/urgent")
     @PreAuthorize("hasAuthority('TRIAGE_INCIDENT')")
     public IncidentResponse markUrgent(@PathVariable Long id,
-                                       @AuthenticationPrincipal AuthUser user) {
+            @AuthenticationPrincipal AuthUser user) {
         return incidentService.markUrgent(id, user);
     }
 
     @PatchMapping("/{id}/text")
     @PreAuthorize("hasAuthority('TRIAGE_INCIDENT')")
     public IncidentResponse correctText(@PathVariable Long id,
-                                        @Valid @RequestBody CorrectIncidentTextRequest request,
-                                        @AuthenticationPrincipal AuthUser user) {
+            @Valid @RequestBody CorrectIncidentTextRequest request,
+            @AuthenticationPrincipal AuthUser user) {
         return incidentService.correctText(id, request, user);
     }
+
+    @PatchMapping("/{id}/reject")
+    @PreAuthorize("hasAuthority('REJECT_INCIDENT')")
+    public IncidentResponse reject(@PathVariable Long id,
+        @Valid @RequestBody RejectIncidentRequest request,
+        @AuthenticationPrincipal AuthUser user) {
+            return incidentService.reject(id, request, user);
+        }
 
     @GetMapping("/{id}/timeline")
     @PreAuthorize("isAuthenticated()")
