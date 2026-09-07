@@ -3,6 +3,7 @@ package com.net2rent.net2rent_backend.controller;
 import com.net2rent.net2rent_backend.dto.ClassifyIncidentRequest;
 import com.net2rent.net2rent_backend.dto.CorrectIncidentTextRequest;
 import com.net2rent.net2rent_backend.dto.IncidentResponse;
+import com.net2rent.net2rent_backend.dto.RejectIncidentRequest;
 import com.net2rent.net2rent_backend.dto.request.CreateChecklistItemRequest;
 import com.net2rent.net2rent_backend.dto.request.CreateCommentRequest;
 import com.net2rent.net2rent_backend.dto.request.IncidentFilter;
@@ -157,6 +158,14 @@ public class IncidentController {
                                         @Valid @RequestBody CorrectIncidentTextRequest request,
                                         @AuthenticationPrincipal AuthUser user) {
         return incidentService.correctText(id, request, user);
+    }
+
+    @PatchMapping("/{id}/reject")
+    @PreAuthorize("hasAuthority('REJECT_INCIDENT')")
+    public IncidentResponse reject(@PathVariable Long id,
+                                   @Valid @RequestBody RejectIncidentRequest request,
+                                   @AuthenticationPrincipal AuthUser user) {
+        return incidentService.reject(id, request, user);
     }
 
     @GetMapping("/{id}/timeline")
