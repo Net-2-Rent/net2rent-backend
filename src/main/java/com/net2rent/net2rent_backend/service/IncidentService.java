@@ -3,6 +3,7 @@ package com.net2rent.net2rent_backend.service;
 import com.net2rent.net2rent_backend.dto.ClassifyIncidentRequest;
 import com.net2rent.net2rent_backend.dto.CorrectIncidentTextRequest;
 import com.net2rent.net2rent_backend.dto.IncidentResponse;
+import com.net2rent.net2rent_backend.dto.RejectIncidentRequest;
 import com.net2rent.net2rent_backend.dto.response.GuestIncidentDetailResponse;
 import com.net2rent.net2rent_backend.dto.response.GuestIncidentSummaryResponse;
 import com.net2rent.net2rent_backend.dto.request.CreatePhoneIncidentRequest;
@@ -46,11 +47,11 @@ public class IncidentService {
     private final Clock clock;
 
     public IncidentService(IncidentRepository incidentRepository,
-                           IncidentCounterRepository incidentCounterRepository,
-                           IncidentHistoryService incidentHistoryService,
-                           LodgingRepository lodgingRepository,
-                           UserRepository userRepository, IncidentImageService incidentImageService,
-                           Clock clock) {
+            IncidentCounterRepository incidentCounterRepository,
+            IncidentHistoryService incidentHistoryService,
+            LodgingRepository lodgingRepository,
+            UserRepository userRepository, IncidentImageService incidentImageService,
+            Clock clock) {
         this.incidentRepository = incidentRepository;
         this.incidentCounterRepository = incidentCounterRepository;
         this.incidentHistoryService = incidentHistoryService;
@@ -271,6 +272,33 @@ public class IncidentService {
     @Transactional(readOnly = true)
     public IncidentResponse getDetail(Long incidentId, AuthUser user) {
         return IncidentResponse.from(getOwnedByAccountOr404(incidentId, user));
+    }
+
+    // ---------- CU-INC-08: rechazar incidencia ----------
+
+    @Transactional
+    public IncidentResponse reject(Long incidentId, RejectIncidentRequest request, AuthUser user) {
+        Incident incident = getOwnedByAccountOr404(incidentId, user);
+
+        IncidentStatus current = incident.getStatus();
+        if (current == IncidentStatus.CLOSED || current == IncidentStatus.REJECTED) {
+            throw new ConflictException("La incidencia está cerrada"); // CU-INC-13
+        }
+        if (current == IncidentStatus.RESOLVED) {
+            throw new ConflictException("No se puede rechazar una incidencia ya resuelta");
+        }
+
+        LocalDateTime now = LocalDateTime.now(clock);
+        AppUser actor = userRepository.getReferenceById(user.userId());
+
+        incident.setStatus(IncidentStatus.REJECTED);
+        incident.setRejectionReason(request.reason().strip());
+
+        incidentHistoryService.record(incident, actor, IncidentEventType.STATUS_CHANGED,
+                current.name(), IncidentStatus.REJECTED.name(), now);
+
+        incidentRepository.save(incident);
+        return IncidentResponse.from(incident);
     }
 
     // ---------- Helpers privados ----------
