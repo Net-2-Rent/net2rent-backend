@@ -15,6 +15,7 @@ import com.net2rent.net2rent_backend.security.AuthUser;
 import com.net2rent.net2rent_backend.service.IncidentChecklistService;
 import com.net2rent.net2rent_backend.service.IncidentCommentService;
 import com.net2rent.net2rent_backend.security.GuestAuthentication;
+import com.net2rent.net2rent_backend.security.GuestPrincipal;
 import com.net2rent.net2rent_backend.service.IncidentService;
 import com.net2rent.net2rent_backend.service.IncidentTimelineService;
 import jakarta.validation.Valid;
@@ -70,15 +71,15 @@ public class IncidentController {
     @GetMapping("/guest")
     @PreAuthorize("isAuthenticated()")
     public List<GuestIncidentSummaryResponse> guestList(
-            @AuthenticationPrincipal GuestAuthentication guest) {
-        return incidentService.listByLodging(guest.getLodgingId());
+            @AuthenticationPrincipal GuestPrincipal guest) {
+        return incidentService.listByLodging(guest.lodgingId());
     }
 
     @GetMapping("/guest/{id}")
     @PreAuthorize("isAuthenticated()")
     public GuestIncidentDetailResponse guestDetail(
             @PathVariable Long id,
-            @AuthenticationPrincipal GuestAuthentication guest) {
+            @AuthenticationPrincipal GuestPrincipal guest) {
         return GuestIncidentDetailResponse.from(
                 incidentService.getOwnedByLodgingOr404(id, guest.getLodgingId()));
     }
@@ -125,7 +126,7 @@ public class IncidentController {
     @GetMapping("/{id}/timeline")
     @PreAuthorize("isAuthenticated()")
     public List<TimelineItemResponse> timeline(@PathVariable Long id,
-                                               @AuthenticationPrincipal AuthUser user) {
+            @AuthenticationPrincipal AuthUser user) {
         return incidentTimelineService.getTimeline(id, user);
     }
 
