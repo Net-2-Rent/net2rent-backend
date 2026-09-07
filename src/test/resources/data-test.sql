@@ -7,6 +7,6 @@ INSERT INTO app_user (account_id, first_name, last_name, email, password_hash, r
                                                                                                  (1, 'Operario', 'Demo', 'operario@net2rent.com', '$2b$10$oPN2dLCxpahTO1Af4sFutuMmS/bt3sgJCf/SDpq78qitfdywngNzy', 'OPERATOR', true),
                                                                                                  (2, 'Admin',    'Otra', 'admin@otraempresa.com', '$2b$10$oPN2dLCxpahTO1Af4sFutuMmS/bt3sgJCf/SDpq78qitfdywngNzy', 'ADMIN',    true);
 
-INSERT INTO lodging (id, account_id, ref, pin_hash, name, active) VALUES
-                                                                      (1, 1, 'APT-1001', '$2b$10$oPN2dLCxpahTO1Af4sFutuMmS/bt3sgJCf/SDpq78qitfdywngNzy', 'Piso Centro', true),
-                                                                      (2, 2, 'APT-2001', '$2b$10$oPN2dLCxpahTO1Af4sFutuMmS/bt3sgJCf/SDpq78qitfdywngNzy', 'Piso Playa',  true);
+INSERT INTO lodging (id, account_id, ref, pin_hash, name, address, active) VALUES
+                                                                      (1, 1, 'APT-1001', '$2b$10$tX8RJ/AN.9NkzP1fE.DeXu7tAvovFMCwuQwEqHO4r1U6iqfZVuR1i', 'Piso Centro', 'Calle Mayor 12, 3ºB', true),
+                                                                      (2, 2, 'APT-2001', '$2b$10$tX8RJ/AN.9NkzP1fE.DeXu7tAvovFMCwuQwEqHO4r1U6iqfZVuR1i', 'Piso Playa', 'Paseo Marítimo 25, 1ºA', true);

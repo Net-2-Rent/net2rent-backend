@@ -1,25 +1,18 @@
 package com.net2rent.net2rent_backend.service;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import com.net2rent.net2rent_backend.dto.IncidentResponse;
+import com.net2rent.net2rent_backend.dto.request.CreateGuestIncidentRequest;
 import com.net2rent.net2rent_backend.dto.request.CreatePhoneIncidentRequest;
+import com.net2rent.net2rent_backend.dto.response.GuestIncidentResponse;
 import com.net2rent.net2rent_backend.exception.ConflictException;
 import com.net2rent.net2rent_backend.exception.NotFoundException;
-import com.net2rent.net2rent_backend.model.Account;
-import com.net2rent.net2rent_backend.model.AppUser;
-import com.net2rent.net2rent_backend.model.Incident;
-import com.net2rent.net2rent_backend.model.IncidentCounter;
-import com.net2rent.net2rent_backend.model.Lodging;
-import com.net2rent.net2rent_backend.model.enums.IncidentCategory;
-import com.net2rent.net2rent_backend.model.enums.IncidentPriority;
-import com.net2rent.net2rent_backend.model.enums.IncidentSource;
-import com.net2rent.net2rent_backend.model.enums.IncidentStatus;
-import com.net2rent.net2rent_backend.model.enums.UserRole;
+import com.net2rent.net2rent_backend.model.*;
+import com.net2rent.net2rent_backend.model.enums.*;
 import com.net2rent.net2rent_backend.repository.IncidentCounterRepository;
-import com.net2rent.net2rent_backend.repository.IncidentHistoryRepository;
 import com.net2rent.net2rent_backend.repository.IncidentRepository;
 import com.net2rent.net2rent_backend.repository.LodgingRepository;
 import com.net2rent.net2rent_backend.repository.UserRepository;
@@ -29,8 +22,10 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 
+import com.net2rent.net2rent_backend.security.GuestPrincipal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -43,9 +38,10 @@ class IncidentServiceTest {
 
     @Mock private IncidentRepository incidentRepository;
     @Mock private IncidentCounterRepository incidentCounterRepository;
-    @Mock private IncidentHistoryRepository incidentHistoryRepository;
+    @Mock private IncidentHistoryService incidentHistoryService;
     @Mock private LodgingRepository lodgingRepository;
     @Mock private UserRepository userRepository;
+    @Mock private IncidentImageService incidentImageService;
 
     private IncidentService service;
 
@@ -61,8 +57,8 @@ class IncidentServiceTest {
     @BeforeEach
     void setUp() {
         service = new IncidentService(
-                incidentRepository, incidentCounterRepository, incidentHistoryRepository,
-                lodgingRepository, userRepository, clock);
+                incidentRepository, incidentCounterRepository, incidentHistoryService,
+                lodgingRepository, userRepository, incidentImageService, clock);
 
         account = Account.builder().id(1L).name("net2Rent Demo").build();
         activeLodging = Lodging.builder()
@@ -104,7 +100,7 @@ class IncidentServiceTest {
         assertEquals(LocalDateTime.of(2026, 9, 1, 9, 0), saved.getOpenedAt());
         assertEquals("No hay luz en el salón desde ayer", saved.getTitle());
 
-        verify(incidentHistoryRepository, times(1)).save(any());
+        verify(incidentHistoryService, times(1)).record(any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -130,7 +126,7 @@ class IncidentServiceTest {
         assertNotNull(saved.getAssignee());
         assertEquals(LocalDateTime.of(2026, 9, 2, 8, 0), saved.getAssignedAt());
 
-        verify(incidentHistoryRepository, times(2)).save(any());
+        verify(incidentHistoryService, times(2)).record(any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -165,6 +161,82 @@ class IncidentServiceTest {
 
         assertThrows(ConflictException.class,
                 () -> service.registerPhoneIncident(request(2L), coordinator));
+
+        verify(incidentRepository, never()).save(any());
+    }
+
+    @Test
+    void guestIncident_createsNew_withNullActorHistoryEvent() {
+        when(lodgingRepository.findById(1L)).thenReturn(Optional.of(activeLodging));
+        when(incidentCounterRepository.findForUpdate(1L, 2026)).thenReturn(Optional.of(
+                IncidentCounter.builder().account(account).year(2026).lastNumber(0).build()));
+        when(incidentRepository.save(any(Incident.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        GuestPrincipal guest = new GuestPrincipal(1L);
+        CreateGuestIncidentRequest req = new CreateGuestIncidentRequest(
+                "Ana", "López", null, IncidentCategory.ELECTRICITY, "No hay luz en el salón desde ayer", List.of());
+
+        GuestIncidentResponse res = service.registerGuestIncident(req, guest);
+
+        assertEquals("INC-2026-000001", res.code());
+
+        ArgumentCaptor<Incident> incidentCaptor = ArgumentCaptor.forClass(Incident.class);
+        verify(incidentRepository).save(incidentCaptor.capture());
+        Incident saved = incidentCaptor.getValue();
+        assertEquals(IncidentStatus.NEW, saved.getStatus());
+        assertEquals(IncidentSource.GUEST_PORTAL, saved.getSource());
+        assertEquals(IncidentPriority.NORMAL, saved.getPriority());
+        assertEquals(IncidentCategory.ELECTRICITY, saved.getCategory());
+        assertNull(saved.getAssignee());
+
+        ArgumentCaptor<IncidentHistory> historyCaptor = ArgumentCaptor.forClass(IncidentHistory.class);
+        verify(incidentHistoryService, times(1)).record(
+                any(Incident.class), isNull(), eq(IncidentEventType.CREATED),
+                isNull(), eq(IncidentStatus.NEW.name()), any(LocalDateTime.class));
+    }
+
+    @Test
+    void guestIncident_withoutCategory_leavesCategoryNull() {
+        when(lodgingRepository.findById(1L)).thenReturn(Optional.of(activeLodging));
+        when(incidentCounterRepository.findForUpdate(1L, 2026)).thenReturn(Optional.of(
+                IncidentCounter.builder().account(account).year(2026).lastNumber(0).build()));
+        when(incidentRepository.save(any(Incident.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        GuestPrincipal guest = new GuestPrincipal(1L);
+        CreateGuestIncidentRequest req = new CreateGuestIncidentRequest(
+                "Ana", "López", null, null, "No hay luz en el salón desde ayer", List.of());
+
+        service.registerGuestIncident(req, guest);
+
+        ArgumentCaptor<Incident> captor = ArgumentCaptor.forClass(Incident.class);
+        verify(incidentRepository).save(captor.capture());
+        assertNull(captor.getValue().getCategory());
+    }
+
+    @Test
+    void guestIncident_missingLodging_throwsNotFound() {
+        when(lodgingRepository.findById(1L)).thenReturn(Optional.empty());
+
+        GuestPrincipal guest = new GuestPrincipal(1L);
+        CreateGuestIncidentRequest req = new CreateGuestIncidentRequest(
+                "Ana", "López", null, null, "No hay luz en el salón desde ayer", List.of());
+
+        assertThrows(NotFoundException.class, () -> service.registerGuestIncident(req, guest));
+
+        verify(incidentRepository, never()).save(any());
+    }
+
+    @Test
+    void guestIncident_inactiveLodging_throwsNotFound() {
+        Lodging inactive = Lodging.builder()
+                .id(1L).account(account).ref("APT-1001").name("Piso Centro").active(false).build();
+        when(lodgingRepository.findById(1L)).thenReturn(Optional.of(inactive));
+
+        GuestPrincipal guest = new GuestPrincipal(1L);
+        CreateGuestIncidentRequest req = new CreateGuestIncidentRequest(
+                "Ana", "López", null, null, "No hay luz en el salón desde ayer", List.of());
+
+        assertThrows(NotFoundException.class, () -> service.registerGuestIncident(req, guest));
 
         verify(incidentRepository, never()).save(any());
     }

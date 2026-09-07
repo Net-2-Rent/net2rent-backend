@@ -3,22 +3,26 @@ package com.net2rent.net2rent_backend.service;
 import com.net2rent.net2rent_backend.dto.ClassifyIncidentRequest;
 import com.net2rent.net2rent_backend.dto.CorrectIncidentTextRequest;
 import com.net2rent.net2rent_backend.dto.IncidentResponse;
+import com.net2rent.net2rent_backend.dto.response.GuestIncidentDetailResponse;
+import com.net2rent.net2rent_backend.dto.response.GuestIncidentSummaryResponse;
 import com.net2rent.net2rent_backend.dto.request.CreatePhoneIncidentRequest;
+import com.net2rent.net2rent_backend.dto.request.CreateGuestIncidentRequest;
+import com.net2rent.net2rent_backend.dto.response.GuestIncidentResponse;
+import com.net2rent.net2rent_backend.security.GuestPrincipal;
 import com.net2rent.net2rent_backend.exception.ConflictException;
 import com.net2rent.net2rent_backend.exception.NotFoundException;
 import com.net2rent.net2rent_backend.model.Account;
 import com.net2rent.net2rent_backend.model.AppUser;
 import com.net2rent.net2rent_backend.model.Incident;
 import com.net2rent.net2rent_backend.model.IncidentCounter;
-import com.net2rent.net2rent_backend.model.IncidentHistory;
 import com.net2rent.net2rent_backend.model.Lodging;
 import com.net2rent.net2rent_backend.model.enums.IncidentCategory;
+import com.net2rent.net2rent_backend.model.enums.IncidentEventType;
 import com.net2rent.net2rent_backend.model.enums.IncidentPriority;
 import com.net2rent.net2rent_backend.model.enums.IncidentSource;
 import com.net2rent.net2rent_backend.model.enums.IncidentStatus;
 import com.net2rent.net2rent_backend.model.enums.UserRole;
 import com.net2rent.net2rent_backend.repository.IncidentCounterRepository;
-import com.net2rent.net2rent_backend.repository.IncidentHistoryRepository;
 import com.net2rent.net2rent_backend.repository.IncidentRepository;
 import com.net2rent.net2rent_backend.repository.LodgingRepository;
 import com.net2rent.net2rent_backend.repository.UserRepository;
@@ -33,31 +37,26 @@ import java.util.List;
 @Service
 public class IncidentService {
 
-    // --- Tipos de evento del historial (triage NET-66) ---
-    private static final String CATEGORY_CHANGED = "CATEGORY_CHANGED";
-    private static final String PRIORITY_CHANGED = "PRIORITY_CHANGED";
-    private static final String TITLE_CHANGED = "TITLE_CHANGED";
-    private static final String DESCRIPTION_CHANGED = "DESCRIPTION_CHANGED";
-
     private final IncidentRepository incidentRepository;
     private final IncidentCounterRepository incidentCounterRepository;
-    private final IncidentHistoryRepository incidentHistoryRepository;
+    private final IncidentHistoryService incidentHistoryService;
     private final LodgingRepository lodgingRepository;
     private final UserRepository userRepository;
+    private final IncidentImageService incidentImageService;
     private final Clock clock;
 
-    // Constructor UNIÓN: las 6 dependencias (las tuyas + las de la compi).
     public IncidentService(IncidentRepository incidentRepository,
-            IncidentCounterRepository incidentCounterRepository,
-            IncidentHistoryRepository incidentHistoryRepository,
-            LodgingRepository lodgingRepository,
-            UserRepository userRepository,
-            Clock clock) {
+                           IncidentCounterRepository incidentCounterRepository,
+                           IncidentHistoryService incidentHistoryService,
+                           LodgingRepository lodgingRepository,
+                           UserRepository userRepository, IncidentImageService incidentImageService,
+                           Clock clock) {
         this.incidentRepository = incidentRepository;
         this.incidentCounterRepository = incidentCounterRepository;
-        this.incidentHistoryRepository = incidentHistoryRepository;
+        this.incidentHistoryService = incidentHistoryService;
         this.lodgingRepository = lodgingRepository;
         this.userRepository = userRepository;
+        this.incidentImageService = incidentImageService;
         this.clock = clock;
     }
 
@@ -81,6 +80,20 @@ public class IncidentService {
     public Incident getOwnedByAccountOr404(Long incidentId, AuthUser user) {
         return incidentRepository
                 .findByIdAndAccount_Id(incidentId, user.accountId())
+                .orElseThrow(() -> new NotFoundException("Incidencia no encontrada"));
+    }
+
+    @Transactional(readOnly = true)
+    public List<GuestIncidentSummaryResponse> listByLodging(Long lodgingId) {
+        return incidentRepository.findByLodging_IdOrderByOpenedAtDesc(lodgingId)
+                .stream()
+                .map(GuestIncidentSummaryResponse::from)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Incident getOwnedByLodgingOr404(Long incidentId, Long lodgingId) {
+        return incidentRepository.findByIdAndLodging_IdWithImages(incidentId, lodgingId)
                 .orElseThrow(() -> new NotFoundException("Incidencia no encontrada"));
     }
 
@@ -135,9 +148,12 @@ public class IncidentService {
 
         Incident saved = incidentRepository.save(incident);
 
-        recordEvent(saved, user, "created", null, status.name(), now);
+        AppUser actorEntity = userRepository.getReferenceById(user.userId());
+        incidentHistoryService.record(saved, actorEntity, IncidentEventType.CREATED,
+                null, status.name(), now);
         if (assignee != null) {
-            recordEvent(saved, user, "assigned", null, assignee.getId().toString(), now);
+            incidentHistoryService.record(saved, actorEntity, IncidentEventType.ASSIGNED,
+                    null, assignee.getId().toString(), now);
         }
 
         return IncidentResponse.from(saved);
@@ -149,19 +165,20 @@ public class IncidentService {
     public IncidentResponse classify(Long incidentId, ClassifyIncidentRequest request, AuthUser user) {
         Incident incident = getOwnedByAccountOr404(incidentId, user);
         LocalDateTime now = LocalDateTime.now(clock);
+        AppUser actorEntity = userRepository.getReferenceById(user.userId());
 
         IncidentCategory oldCategory = incident.getCategory();
         if (oldCategory != request.category()) {
             incident.setCategory(request.category());
-            recordEvent(incident, user, CATEGORY_CHANGED, nameOrNull(oldCategory),
-                    request.category().name(), now);
+            incidentHistoryService.record(incident, actorEntity, IncidentEventType.CATEGORY_CHANGED,
+                    nameOrNull(oldCategory), request.category().name(), now);
         }
 
         IncidentPriority oldPriority = incident.getPriority();
         if (oldPriority != request.priority()) {
             incident.setPriority(request.priority());
-            recordEvent(incident, user, PRIORITY_CHANGED, nameOrNull(oldPriority),
-                    request.priority().name(), now);
+            incidentHistoryService.record(incident, actorEntity, IncidentEventType.PRIORITY_CHANGED,
+                    nameOrNull(oldPriority), request.priority().name(), now);
         }
 
         incidentRepository.save(incident);
@@ -177,8 +194,9 @@ public class IncidentService {
         IncidentPriority oldPriority = incident.getPriority();
         if (oldPriority != IncidentPriority.URGENT) {
             incident.setPriority(IncidentPriority.URGENT);
-            recordEvent(incident, user, PRIORITY_CHANGED, nameOrNull(oldPriority),
-                    IncidentPriority.URGENT.name(), LocalDateTime.now(clock));
+            AppUser actorEntity = userRepository.getReferenceById(user.userId());
+            incidentHistoryService.record(incident, actorEntity, IncidentEventType.PRIORITY_CHANGED,
+                    nameOrNull(oldPriority), IncidentPriority.URGENT.name(), LocalDateTime.now(clock));
             incidentRepository.save(incident);
         }
         return IncidentResponse.from(incident);
@@ -190,23 +208,64 @@ public class IncidentService {
     public IncidentResponse correctText(Long incidentId, CorrectIncidentTextRequest request, AuthUser user) {
         Incident incident = getOwnedByAccountOr404(incidentId, user);
         LocalDateTime now = LocalDateTime.now(clock);
+        AppUser actorEntity = userRepository.getReferenceById(user.userId());
 
         String oldDescription = incident.getDescription();
         if (!request.description().equals(oldDescription)) {
             incident.setDescription(request.description());
-            recordEvent(incident, user, DESCRIPTION_CHANGED, oldDescription,
-                    request.description(), now);
+            incidentHistoryService.record(incident, actorEntity, IncidentEventType.DESCRIPTION_CHANGED,
+                    oldDescription, request.description(), now);
         }
 
         String newTitle = resolveTitle(request.title(), request.description());
         String oldTitle = incident.getTitle();
         if (!newTitle.equals(oldTitle)) {
             incident.setTitle(newTitle);
-            recordEvent(incident, user, TITLE_CHANGED, oldTitle, newTitle, now);
+            incidentHistoryService.record(incident, actorEntity, IncidentEventType.TITLE_CHANGED,
+                    oldTitle, newTitle, now);
         }
 
         incidentRepository.save(incident);
         return IncidentResponse.from(incident);
+    }
+
+    // ---------- Alta desde el portal del huésped ----------
+
+    @Transactional
+    public GuestIncidentResponse registerGuestIncident(CreateGuestIncidentRequest req, GuestPrincipal guest) {
+        LocalDateTime now = LocalDateTime.now(clock);
+
+        Lodging lodging = lodgingRepository.findById(guest.lodgingId())
+                .filter(Lodging::isActive)
+                .orElseThrow(() -> new NotFoundException("Alojamiento no encontrado"));
+
+        Account account = lodging.getAccount();
+        String code = nextIncidentCode(account, now.getYear());
+
+        Incident incident = Incident.builder()
+                .account(account)
+                .code(code)
+                .source(IncidentSource.GUEST_PORTAL)
+                .status(IncidentStatus.NEW)
+                .priority(IncidentPriority.NORMAL)
+                .category(req.category())
+                .lodging(lodging)
+                .title(buildTitle(req.description()))
+                .description(req.description())
+                .guestFirstName(req.firstName())
+                .guestLastName(req.lastName())
+                .guestContact(normalizeContact(req.contact()))
+                .openedAt(now)
+                .createdAt(now)
+                .build();
+
+        incident.setImages(incidentImageService.buildImages(req.images(), incident, now));
+        Incident saved = incidentRepository.save(incident);
+
+        incidentHistoryService.record(saved, null, IncidentEventType.CREATED,
+                null, IncidentStatus.NEW.name(), now);
+
+        return GuestIncidentResponse.from(saved);
     }
 
     @Transactional(readOnly = true)
@@ -248,19 +307,6 @@ public class IncidentService {
             return null;
         String t = contact.strip();
         return t.isEmpty() ? null : t;
-    }
-
-    private void recordEvent(Incident incident, AuthUser actor, String eventType,
-            String previousValue, String newValue, LocalDateTime now) {
-        IncidentHistory event = IncidentHistory.builder()
-                .incident(incident)
-                .actor(userRepository.getReferenceById(actor.userId()))
-                .eventType(eventType)
-                .previousValue(previousValue)
-                .newValue(newValue)
-                .createdAt(now)
-                .build();
-        incidentHistoryRepository.save(event);
     }
 
     private static String nameOrNull(Enum<?> value) {

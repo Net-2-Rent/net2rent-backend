@@ -5,12 +5,13 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @Entity
-@Table(name = "incident_history")
-public class IncidentHistory {
+@Table(name = "incident_image")
+public class IncidentImage {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -20,17 +21,13 @@ public class IncidentHistory {
     @JoinColumn(name = "incident_id", nullable = false)
     private Incident incident;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "actor_id")
-    private AppUser actor; 
-
     @Column(nullable = false)
-    private String eventType; 
+    private byte[] data;
 
-    private String previousValue;
-    private String newValue;
+    @Column(nullable = false, length = 100)
+    private String contentType;
 
     @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private LocalDateTime uploadedAt;
 
 }
