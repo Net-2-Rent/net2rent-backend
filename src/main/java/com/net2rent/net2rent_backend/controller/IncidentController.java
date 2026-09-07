@@ -11,6 +11,7 @@ import com.net2rent.net2rent_backend.dto.response.TimelineItemResponse;
 import com.net2rent.net2rent_backend.security.AuthUser;
 import com.net2rent.net2rent_backend.service.IncidentCommentService;
 import com.net2rent.net2rent_backend.security.GuestAuthentication;
+import com.net2rent.net2rent_backend.security.GuestPrincipal;
 import com.net2rent.net2rent_backend.service.IncidentService;
 import com.net2rent.net2rent_backend.service.IncidentTimelineService;
 import jakarta.validation.Valid;
@@ -38,7 +39,8 @@ public class IncidentController {
     private final IncidentTimelineService incidentTimelineService;
     private final IncidentCommentService incidentCommentService;
 
-    public IncidentController(IncidentService incidentService, IncidentTimelineService incidentTimelineService, IncidentCommentService incidentCommentService) {
+    public IncidentController(IncidentService incidentService, IncidentTimelineService incidentTimelineService,
+            IncidentCommentService incidentCommentService) {
         this.incidentService = incidentService;
         this.incidentTimelineService = incidentTimelineService;
         this.incidentCommentService = incidentCommentService;
@@ -60,18 +62,18 @@ public class IncidentController {
     @GetMapping("/guest")
     @PreAuthorize("isAuthenticated()")
     public List<GuestIncidentSummaryResponse> guestList(
-            @AuthenticationPrincipal GuestAuthentication guest) {
-        return incidentService.listByLodging(guest.getLodgingId());
+            @AuthenticationPrincipal GuestPrincipal guest) {
+        return incidentService.listByLodging(guest.lodgingId());
     }
 
     @GetMapping("/guest/{id}")
     @PreAuthorize("isAuthenticated()")
     public GuestIncidentDetailResponse guestDetail(
             @PathVariable Long id,
-            @AuthenticationPrincipal GuestAuthentication guest) {
+            @AuthenticationPrincipal GuestPrincipal guest) {
         return GuestIncidentDetailResponse.from(
-                incidentService.getOwnedByLodgingOr404(id, guest.getLodgingId()));
-        }
+                incidentService.getOwnedByLodgingOr404(id, guest.lodgingId()));
+    }
 
     @PostMapping
     @PreAuthorize("hasAuthority('REGISTER_PHONE_INCIDENT')")
@@ -92,30 +94,30 @@ public class IncidentController {
     @PatchMapping("/{id}/classification")
     @PreAuthorize("hasAuthority('TRIAGE_INCIDENT')")
     public IncidentResponse classify(@PathVariable Long id,
-        @Valid @RequestBody ClassifyIncidentRequest request,
-        @AuthenticationPrincipal AuthUser user) {
-            return incidentService.classify(id, request, user);
+            @Valid @RequestBody ClassifyIncidentRequest request,
+            @AuthenticationPrincipal AuthUser user) {
+        return incidentService.classify(id, request, user);
     }
 
     @PatchMapping("/{id}/urgent")
     @PreAuthorize("hasAuthority('TRIAGE_INCIDENT')")
     public IncidentResponse markUrgent(@PathVariable Long id,
-        @AuthenticationPrincipal AuthUser user) {
-            return incidentService.markUrgent(id, user);
+            @AuthenticationPrincipal AuthUser user) {
+        return incidentService.markUrgent(id, user);
     }
 
     @PatchMapping("/{id}/text")
     @PreAuthorize("hasAuthority('TRIAGE_INCIDENT')")
     public IncidentResponse correctText(@PathVariable Long id,
-        @Valid @RequestBody CorrectIncidentTextRequest request,
-        @AuthenticationPrincipal AuthUser user) {
-            return incidentService.correctText(id, request, user);
+            @Valid @RequestBody CorrectIncidentTextRequest request,
+            @AuthenticationPrincipal AuthUser user) {
+        return incidentService.correctText(id, request, user);
     }
 
     @GetMapping("/{id}/timeline")
     @PreAuthorize("isAuthenticated()")
     public List<TimelineItemResponse> timeline(@PathVariable Long id,
-                                               @AuthenticationPrincipal AuthUser user) {
+            @AuthenticationPrincipal AuthUser user) {
         return incidentTimelineService.getTimeline(id, user);
     }
 
