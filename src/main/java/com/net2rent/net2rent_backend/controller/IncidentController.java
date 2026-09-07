@@ -42,8 +42,7 @@ public class IncidentController {
     @PreAuthorize("isAuthenticated()")
     public IncidentResponse getOne(@PathVariable Long id,
             @AuthenticationPrincipal AuthUser user) {
-        return IncidentResponse.from(
-                incidentService.getOwnedByAccountOr404(id, user));
+        return incidentService.getDetail(id, user);
     }
 
     @PostMapping

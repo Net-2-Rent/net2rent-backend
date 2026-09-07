@@ -209,6 +209,11 @@ public class IncidentService {
         return IncidentResponse.from(incident);
     }
 
+    @Transactional(readOnly = true)
+    public IncidentResponse getDetail(Long incidentId, AuthUser user) {
+        return IncidentResponse.from(getOwnedByAccountOr404(incidentId, user));
+    }
+
     // ---------- Helpers privados ----------
 
     private String nextIncidentCode(Account account, int year) {
