@@ -17,6 +17,7 @@ import com.net2rent.net2rent_backend.dto.response.TimelineItemResponse;
 import com.net2rent.net2rent_backend.model.enums.IncidentCategory;
 import com.net2rent.net2rent_backend.model.enums.IncidentPriority;
 import com.net2rent.net2rent_backend.model.enums.IncidentStatus;
+import com.net2rent.net2rent_backend.model.enums.OperatorScope;
 import com.net2rent.net2rent_backend.repository.spec.SortField;
 import com.net2rent.net2rent_backend.security.AuthUser;
 import com.net2rent.net2rent_backend.service.IncidentChecklistService;
@@ -82,6 +83,7 @@ public class IncidentController {
             @RequestParam(defaultValue = "desc") String dir,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) OperatorScope scope,
             @AuthenticationPrincipal AuthUser user) {
 
         IncidentFilter filter = new IncidentFilter(
@@ -95,7 +97,7 @@ public class IncidentController {
 
         Pageable pageable = PageRequest.of(safePage, safeSize);
 
-        return incidentService.list(filter, sortField, direction, pageable, user);
+        return incidentService.list(filter, sortField, direction, pageable, user, scope);
     }
 
     @GetMapping("/{id}")
