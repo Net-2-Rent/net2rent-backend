@@ -139,6 +139,7 @@ CREATE TABLE public.incident_checklist_item (
     incident_id bigint NOT NULL,
     checked_by_id bigint,
     checked_at timestamp(6) without time zone,
+    position integer NOT NULL DEFAULT 0,
     text character varying(200) NOT NULL
 );
 

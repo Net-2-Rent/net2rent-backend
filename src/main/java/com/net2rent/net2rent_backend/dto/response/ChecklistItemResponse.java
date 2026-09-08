@@ -8,6 +8,7 @@ public record ChecklistItemResponse(
         Long id,
         String text,
         boolean done,
+        Integer position,
         String checkedByName,
         LocalDateTime checkedAt
 ) {
@@ -20,6 +21,7 @@ public record ChecklistItemResponse(
                 item.getId(),
                 item.getText(),
                 item.isDone(),
+                item.getPosition(),
                 checkedByName,
                 item.getCheckedAt()
         );

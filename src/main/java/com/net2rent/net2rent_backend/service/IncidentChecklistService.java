@@ -1,6 +1,7 @@
 package com.net2rent.net2rent_backend.service;
 
 import com.net2rent.net2rent_backend.dto.request.CreateChecklistItemRequest;
+import com.net2rent.net2rent_backend.dto.request.ReorderChecklistRequest;
 import com.net2rent.net2rent_backend.dto.request.UpdateChecklistItemRequest;
 import com.net2rent.net2rent_backend.dto.response.ChecklistItemResponse;
 import com.net2rent.net2rent_backend.exception.ConflictException;
@@ -17,7 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class IncidentChecklistService {
@@ -29,10 +31,10 @@ public class IncidentChecklistService {
     private final Clock clock;
 
     public IncidentChecklistService(IncidentService incidentService,
-                                    IncidentAccessPolicy incidentAccessPolicy,
-                                    IncidentCheckListItemRepository checklistItemRepository,
-                                    UserRepository userRepository,
-                                    Clock clock) {
+            IncidentAccessPolicy incidentAccessPolicy,
+            IncidentCheckListItemRepository checklistItemRepository,
+            UserRepository userRepository,
+            Clock clock) {
         this.incidentService = incidentService;
         this.incidentAccessPolicy = incidentAccessPolicy;
         this.checklistItemRepository = checklistItemRepository;
@@ -43,14 +45,14 @@ public class IncidentChecklistService {
     @Transactional(readOnly = true)
     public List<ChecklistItemResponse> list(Long incidentId, AuthUser user) {
         Incident incident = incidentService.getOwnedByAccountOr404(incidentId, user);
-        return checklistItemRepository.findByIncident_IdOrderByIdAsc(incident.getId())
+        return checklistItemRepository.findByIncident_IdOrderByPositionAscIdAsc(incident.getId())
                 .stream()
                 .map(ChecklistItemResponse::from)
                 .toList();
     }
 
     @Transactional
-    public ChecklistItemResponse addItem(Long incidentId, CreateChecklistItemRequest request, AuthUser user) {
+    public List<ChecklistItemResponse> addItem(Long incidentId, CreateChecklistItemRequest request, AuthUser user) {
         Incident incident = incidentService.getOwnedByAccountOr404(incidentId, user);
         incidentAccessPolicy.ensureCanActOn(incident, user);
         ensureNotTerminal(incident);
@@ -60,13 +62,31 @@ public class IncidentChecklistService {
                 .text(request.text())
                 .done(false)
                 .build();
+        checklistItemRepository.save(item);
 
-        return ChecklistItemResponse.from(checklistItemRepository.save(item));
+        // Reconstruir orden: [pendientes existentes] + [nuevo] + [hechas]
+        List<IncidentCheckListItem> all = checklistItemRepository
+                .findByIncident_IdOrderByPositionAscIdAsc(incident.getId());
+
+        List<Long> pendingIds = all.stream()
+                .filter(i -> !i.isDone() && !i.getId().equals(item.getId()))
+                .map(IncidentCheckListItem::getId)
+                .toList();
+        List<Long> doneIds = all.stream()
+                .filter(IncidentCheckListItem::isDone)
+                .map(IncidentCheckListItem::getId)
+                .toList();
+
+        List<Long> orderedIds = new ArrayList<>(pendingIds);
+        orderedIds.add(item.getId());
+        orderedIds.addAll(doneIds);
+
+        return persistOrder(incident, orderedIds);
     }
 
     @Transactional
-    public ChecklistItemResponse setDone(Long incidentId, Long itemId,
-                                         UpdateChecklistItemRequest request, AuthUser user) {
+    public List<ChecklistItemResponse> setDone(Long incidentId, Long itemId,
+            UpdateChecklistItemRequest request, AuthUser user) {
         Incident incident = incidentService.getOwnedByAccountOr404(incidentId, user);
         incidentAccessPolicy.ensureCanActOn(incident, user);
         ensureNotTerminal(incident);
@@ -78,12 +98,33 @@ public class IncidentChecklistService {
         item.setDone(request.done());
         item.setCheckedBy(userRepository.getReferenceById(user.userId()));
         item.setCheckedAt(LocalDateTime.now(clock));
+        checklistItemRepository.save(item);
 
-        return ChecklistItemResponse.from(checklistItemRepository.save(item));
+        // Reconstruir orden completo
+        List<IncidentCheckListItem> all = checklistItemRepository
+                .findByIncident_IdOrderByPositionAscIdAsc(incident.getId());
+
+        List<Long> otherIds = all.stream()
+                .filter(i -> !i.getId().equals(itemId))
+                .map(IncidentCheckListItem::getId)
+                .toList();
+
+        List<Long> orderedIds = new ArrayList<>();
+        if (request.done()) {
+            // Hecha → al final
+            orderedIds.addAll(otherIds);
+            orderedIds.add(itemId);
+        } else {
+            // Pendiente → al principio
+            orderedIds.add(itemId);
+            orderedIds.addAll(otherIds);
+        }
+
+        return persistOrder(incident, orderedIds);
     }
 
     @Transactional
-    public void deleteItem(Long incidentId, Long itemId, AuthUser user) {
+    public List<ChecklistItemResponse> deleteItem(Long incidentId, Long itemId, AuthUser user) {
         Incident incident = incidentService.getOwnedByAccountOr404(incidentId, user);
         incidentAccessPolicy.ensureCanActOn(incident, user);
         ensureNotTerminal(incident);
@@ -93,6 +134,61 @@ public class IncidentChecklistService {
                 .orElseThrow(() -> new NotFoundException("Item de checklist no encontrado"));
 
         checklistItemRepository.delete(item);
+
+        // Reindexar los que quedan
+        List<IncidentCheckListItem> remaining = checklistItemRepository
+                .findByIncident_IdOrderByPositionAscIdAsc(incident.getId());
+        List<Long> remainingIds = remaining.stream()
+                .map(IncidentCheckListItem::getId)
+                .toList();
+
+        return persistOrder(incident, remainingIds);
+    }
+
+    @Transactional
+    public List<ChecklistItemResponse> reorder(Long incidentId,
+            ReorderChecklistRequest request,
+            AuthUser user) {
+        Incident incident = incidentService.getOwnedByAccountOr404(incidentId, user);
+        incidentAccessPolicy.ensureCanActOn(incident, user);
+        ensureNotTerminal(incident);
+
+        return persistOrder(incident, request.orderedIds());
+    }
+
+    // ---------- Helper ----------
+
+    private List<ChecklistItemResponse> persistOrder(Incident incident, List<Long> orderedIds) {
+        List<IncidentCheckListItem> all = checklistItemRepository
+                .findByIncident_IdOrderByPositionAscIdAsc(incident.getId());
+
+        Set<Long> existingIds = all.stream()
+                .map(IncidentCheckListItem::getId)
+                .collect(Collectors.toSet());
+
+        // Validar: mismos ids (sin duplicados) y sin faltantes/extraños
+        boolean hasDuplicates = new HashSet<>(orderedIds).size() != orderedIds.size();
+        boolean sameSet = new HashSet<>(orderedIds).equals(existingIds);
+
+        if (hasDuplicates || !sameSet) {
+            throw new ConflictException(
+                    "La lista de ids no coincide con los items de la incidencia");
+        }
+
+        Map<Long, IncidentCheckListItem> byId = all.stream()
+                .collect(Collectors.toMap(IncidentCheckListItem::getId, i -> i));
+
+        int pos = 0;
+        for (Long id : orderedIds) {
+            byId.get(id).setPosition(pos++);
+        }
+
+        checklistItemRepository.saveAll(all);
+
+        return orderedIds.stream()
+                .map(id -> byId.get(id))
+                .map(ChecklistItemResponse::from)
+                .toList();
     }
 
     private void ensureNotTerminal(Incident incident) {

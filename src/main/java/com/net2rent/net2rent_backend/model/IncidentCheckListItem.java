@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 @Table(name = "incident_checklist_item")
 public class IncidentCheckListItem {
 
-     @Id
+    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
@@ -28,6 +28,10 @@ public class IncidentCheckListItem {
     @Column(nullable = false)
     @Builder.Default
     private boolean done = false;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer position = 0;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "checked_by_id")
