@@ -31,6 +31,9 @@ import com.net2rent.net2rent_backend.model.Account;
 import com.net2rent.net2rent_backend.model.Lodging;
 import com.net2rent.net2rent_backend.repository.LodgingRepository;
 
+import com.net2rent.net2rent_backend.model.LodgingCounter;
+import com.net2rent.net2rent_backend.repository.LodgingCounterRepository;
+
 @ExtendWith(MockitoExtension.class)
 class LodgingServiceTest {
 
@@ -40,27 +43,31 @@ class LodgingServiceTest {
     private PasswordEncoder passwordEncoder;
     @Mock
     private EntityManager entityManager;
+    @Mock
+    private LodgingCounterRepository lodgingCounterRepository;
 
     private LodgingService lodgingService;
 
     @BeforeEach
     void setUp() {
-        lodgingService = new LodgingService(lodgingRepository, passwordEncoder, entityManager);
+        lodgingService = new LodgingService(lodgingRepository, lodgingCounterRepository, passwordEncoder, entityManager);
     }
 
-    @Test
-    void create_savesLodging_whenRefIsAvailableAndPinIsValid() {
+        @Test
+    void create_savesLodging_generatesSequentialRef_whenPinIsValid() {
         Long accountId = 1L;
         LodgingRequest request = new LodgingRequest(
                 "Apto Centro",
                 "Calle Mayor 5",
-                "APT-1001",
                 "1234",
                 "Notas de acceso");
 
         Account account = Account.builder().id(accountId).build();
+        LodgingCounter counter = LodgingCounter.builder().id(1L).lastNumber(0).build();
 
-        when(lodgingRepository.findByRef("APT-1001")).thenReturn(Optional.empty());
+        when(lodgingCounterRepository.findForUpdate()).thenReturn(Optional.of(counter));
+        when(lodgingCounterRepository.save(any(LodgingCounter.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
         when(entityManager.getReference(Account.class, accountId)).thenReturn(account);
         when(passwordEncoder.encode("1234")).thenReturn("hashed-pin");
         when(lodgingRepository.save(any(Lodging.class))).thenAnswer(invocation -> {
@@ -72,28 +79,9 @@ class LodgingServiceTest {
         LodgingResponse response = lodgingService.create(accountId, request);
 
         assertEquals(10L, response.id());
-        assertEquals("APT-1001", response.ref());
+        assertEquals("APT-0001", response.ref());
         assertEquals("Apto Centro", response.name());
         assertTrue(response.active());
-    }
-
-    @Test
-    void create_throwsConflict_whenRefAlreadyExists() {
-        Long accountId = 1L;
-        LodgingRequest request = new LodgingRequest(
-                "Apto Centro",
-                "Calle Mayor 5",
-                "APT-1001",
-                "1234",
-                "Notas de acceso");
-
-        Lodging existing = Lodging.builder().id(5L).ref("APT-1001").build();
-        when(lodgingRepository.findByRef("APT-1001")).thenReturn(Optional.of(existing));
-
-        assertThrows(ConflictException.class,
-                () -> lodgingService.create(accountId, request));
-
-        verify(lodgingRepository, never()).save(any(Lodging.class));
     }
 
     @Test
@@ -102,14 +90,13 @@ class LodgingServiceTest {
         LodgingRequest request = new LodgingRequest(
                 "Apto Centro",
                 "Calle Mayor 5",
-                "APT-1001",
                 "",
                 "Notas de acceso");
 
         assertThrows(ConflictException.class,
                 () -> lodgingService.create(accountId, request));
 
-        verify(lodgingRepository, never()).findByRef(any());
+        verify(lodgingCounterRepository, never()).findForUpdate();
         verify(lodgingRepository, never()).save(any(Lodging.class));
     }
 
@@ -130,13 +117,11 @@ class LodgingServiceTest {
         LodgingRequest request = new LodgingRequest(
                 "Nombre nuevo",
                 "Dirección nueva",
-                "APT-1001",
                 "5678",
                 "Notas nuevas");
 
         when(lodgingRepository.findByIdAndAccount_Id(lodgingId, accountId))
                 .thenReturn(Optional.of(existing));
-        when(lodgingRepository.findByRef("APT-1001")).thenReturn(Optional.of(existing));
         when(passwordEncoder.encode("5678")).thenReturn("new-hash");
         when(lodgingRepository.save(any(Lodging.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -155,7 +140,6 @@ class LodgingServiceTest {
         LodgingRequest request = new LodgingRequest(
                 "Nombre nuevo",
                 "Dirección nueva",
-                "APT-1001",
                 "5678",
                 "Notas nuevas");
 
@@ -168,37 +152,6 @@ class LodgingServiceTest {
         verify(lodgingRepository, never()).save(any(Lodging.class));
     }
 
-    @Test
-    void update_throwsConflict_whenRefBelongsToAnotherLodging() {
-        Long accountId = 1L;
-        Long lodgingId = 5L;
-
-        Lodging existing = Lodging.builder()
-                .id(lodgingId)
-                .ref("APT-1001")
-                .build();
-
-        Lodging other = Lodging.builder()
-                .id(7L)
-                .ref("APT-2001")
-                .build();
-
-        LodgingRequest request = new LodgingRequest(
-                "Nombre nuevo",
-                "Dirección nueva",
-                "APT-2001",
-                "5678",
-                "Notas nuevas");
-
-        when(lodgingRepository.findByIdAndAccount_Id(lodgingId, accountId))
-                .thenReturn(Optional.of(existing));
-        when(lodgingRepository.findByRef("APT-2001")).thenReturn(Optional.of(other));
-
-        assertThrows(ConflictException.class,
-                () -> lodgingService.update(accountId, lodgingId, request));
-
-        verify(lodgingRepository, never()).save(any(Lodging.class));
-    }
 
     @Test
     void deactivate_setsActiveFalse_whenLodgingExists() {

@@ -12,9 +12,6 @@ public record LodgingRequest(
     @NotBlank(message = "La dirección es obligatoria")
     String address,
 
-    @NotBlank(message = "La referencia es obligatoria")
-    String ref,
-
     @Pattern(regexp = "\\d{4}", message = "El PIN debe tener 4 dígitos")
     String pin,
 
