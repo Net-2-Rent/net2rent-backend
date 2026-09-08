@@ -6,6 +6,8 @@ import com.net2rent.net2rent_backend.exception.ConflictException;
 import com.net2rent.net2rent_backend.exception.NotFoundException;
 import com.net2rent.net2rent_backend.model.Account;
 import com.net2rent.net2rent_backend.model.Lodging;
+import com.net2rent.net2rent_backend.model.LodgingCounter;
+import com.net2rent.net2rent_backend.repository.LodgingCounterRepository;
 import com.net2rent.net2rent_backend.repository.LodgingRepository;
 
 import jakarta.persistence.EntityManager;
@@ -20,12 +22,16 @@ import java.util.List;
 public class LodgingService {
 
     private final LodgingRepository lodgingRepository;
+    private final LodgingCounterRepository lodgingCounterRepository;
     private final PasswordEncoder passwordEncoder;
     private final EntityManager entityManager;
 
-    public LodgingService(LodgingRepository lodgingRepository, PasswordEncoder passwordEncoder,
+    public LodgingService(LodgingRepository lodgingRepository,
+            LodgingCounterRepository lodgingCounterRepository,
+            PasswordEncoder passwordEncoder,
             EntityManager entityManager) {
         this.lodgingRepository = lodgingRepository;
+        this.lodgingCounterRepository = lodgingCounterRepository;
         this.passwordEncoder = passwordEncoder;
         this.entityManager = entityManager;
     }
@@ -49,11 +55,9 @@ public class LodgingService {
             throw new ConflictException("El PIN es obligatorio al crear un alojamiento");
         }
 
-        assertRefAvailable(request.ref(), null);
-
         Lodging lodging = new Lodging();
         lodging.setAccount(entityManager.getReference(Account.class, accountId));
-        lodging.setRef(request.ref());
+        lodging.setRef(nextLodgingRef());
         lodging.setName(request.name());
         lodging.setAddress(request.address());
         lodging.setAccessNotes(request.accessNotes());
@@ -68,11 +72,8 @@ public class LodgingService {
         Lodging lodging = lodgingRepository.findByIdAndAccount_Id(id, accountId)
                 .orElseThrow(() -> new NotFoundException("Alojamiento no encontrado"));
 
-        assertRefAvailable(request.ref(), id);
-
         lodging.setName(request.name());
         lodging.setAddress(request.address());
-        lodging.setRef(request.ref());
         lodging.setAccessNotes(request.accessNotes());
         if (request.pin() != null && !request.pin().isBlank()) {
             lodging.setPinHash(passwordEncoder.encode(request.pin()));
@@ -89,11 +90,14 @@ public class LodgingService {
         lodgingRepository.save(lodging);
     }
 
-    private void assertRefAvailable(String ref, Long currentLodgingId) {
-        lodgingRepository.findByRef(ref).ifPresent(existing -> {
-            if (currentLodgingId == null || !existing.getId().equals(currentLodgingId)) {
-                throw new ConflictException("Ya existe un alojamiento con esa referencia");
-            }
-        });
+    private String nextLodgingRef() {
+        LodgingCounter counter = lodgingCounterRepository.findForUpdate()
+                .orElseGet(() -> lodgingCounterRepository.save(
+                        LodgingCounter.builder().lastNumber(0).build()));
+
+        counter.setLastNumber(counter.getLastNumber() + 1);
+        lodgingCounterRepository.save(counter);
+
+        return "APT-%04d".formatted(counter.getLastNumber());
     }
 }
