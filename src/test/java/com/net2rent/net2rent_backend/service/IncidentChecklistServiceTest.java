@@ -256,9 +256,9 @@ class IncidentChecklistServiceTest {
         List<ChecklistItemResponse> res = service.reorder(5L, request, coordinator);
 
         assertEquals(3, res.size());
-        assertEquals(1, res.get(0).position()); // a → pos 1
-        assertEquals(2, res.get(1).position()); // b → pos 2
-        assertEquals(0, res.get(2).position()); // c → pos 0
+        assertEquals(0, res.get(0).position()); // c → pos 0 (primero en la request)
+        assertEquals(1, res.get(1).position()); // a → pos 1
+        assertEquals(2, res.get(2).position()); // b → pos 2
     }
 
     @Test

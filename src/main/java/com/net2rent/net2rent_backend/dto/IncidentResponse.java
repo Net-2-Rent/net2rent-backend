@@ -20,7 +20,6 @@ public record IncidentResponse(
                 String lodgingAddress,
                 String lodgingAccessNotes,
                 String assigneeName,
-                LocalDateTime openedAt
                 LocalDateTime openedAt,
                 LocalDateTime startedAt,
                 String pauseReason) {
