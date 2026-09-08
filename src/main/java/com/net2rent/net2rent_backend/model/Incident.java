@@ -13,98 +13,97 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 @Entity
-@Table(name = "incident",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_incident_account_code",
-                columnNames = {"account_id", "code"}))
+@Table(name = "incident", uniqueConstraints = @UniqueConstraint(name = "uk_incident_account_code", columnNames = {
+                "account_id", "code" }))
 public class Incident {
 
-   @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+        @Id
+        @GeneratedValue(strategy = GenerationType.IDENTITY)
+        private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "account_id", nullable = false)
-    private Account account;
+        @ManyToOne(fetch = FetchType.LAZY, optional = false)
+        @JoinColumn(name = "account_id", nullable = false)
+        private Account account;
 
-    @Column(nullable = false)
-    private String code;
+        @Column(nullable = false)
+        private String code;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private IncidentSource source;
+        @Enumerated(EnumType.STRING)
+        @Column(nullable = false, length = 20)
+        private IncidentSource source;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private IncidentStatus status;
+        @Enumerated(EnumType.STRING)
+        @Column(nullable = false, length = 20)
+        private IncidentStatus status;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private IncidentPriority priority;
+        @Enumerated(EnumType.STRING)
+        @Column(nullable = false, length = 20)
+        private IncidentPriority priority;
 
-    @Enumerated(EnumType.STRING)
-    @Column(length = 20)
-    private IncidentCategory category;
+        @Enumerated(EnumType.STRING)
+        @Column(length = 20)
+        private IncidentCategory category;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "lodging_id", nullable = false)
-    private Lodging lodging;
+        @ManyToOne(fetch = FetchType.LAZY, optional = false)
+        @JoinColumn(name = "lodging_id", nullable = false)
+        private Lodging lodging;
 
-    @Column(nullable = false, length = 150)
-    private String title;
+        @Column(nullable = false, length = 150)
+        private String title;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
-    private String description;
+        @Column(nullable = false, columnDefinition = "TEXT")
+        private String description;
 
-    // Datos del huésped, embebidos.
-    @Column(nullable = false)
-    private String guestFirstName;
+        // Datos del huésped, embebidos.
+        @Column(nullable = false)
+        private String guestFirstName;
 
-    @Column(nullable = false)
-    private String guestLastName;
+        @Column(nullable = false)
+        private String guestLastName;
 
-    private String guestContact;
+        private String guestContact;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "assignee_id")
-    private AppUser assignee; 
+        @ManyToOne(fetch = FetchType.LAZY)
+        @JoinColumn(name = "assignee_id")
+        private AppUser assignee;
 
-    @Column(nullable = false)
-    private LocalDateTime openedAt; 
+        @Column(nullable = false)
+        private LocalDateTime openedAt;
 
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt; 
+        @Column(nullable = false, updatable = false)
+        private LocalDateTime createdAt;
 
-    private LocalDateTime assignedAt;
-    private LocalDateTime startedAt;
-    private LocalDateTime resolvedAt;
-    private LocalDateTime closedAt;
+        private LocalDateTime assignedAt;
+        private LocalDateTime startedAt;
+        private LocalDateTime resolvedAt;
+        private LocalDateTime closedAt;
 
-    private Integer minutesSpent;
+        private Integer minutesSpent;
 
-    @Column(columnDefinition = "TEXT")
-    private String resolutionNote;
+        @Column(columnDefinition = "TEXT")
+        private String resolutionNote;
 
-    @Column(columnDefinition = "TEXT")
-    private String pauseReason;
+        @Column(columnDefinition = "TEXT")
+        private String pauseReason;
 
-    @Column(columnDefinition = "TEXT")
-    private String rejectionReason;
+        @Column(columnDefinition = "TEXT")
+        private String rejectionReason;
 
-    @Column(columnDefinition = "TEXT")
-    private String reassignmentReason;
+        @Column(columnDefinition = "TEXT")
+        private String reassignmentReason;
 
-    @OneToMany(mappedBy = "incident", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<IncidentCheckListItem> checklistItems;
+        @OrderBy("position ASC, id ASC")
+        @OneToMany(mappedBy = "incident", cascade = CascadeType.ALL, orphanRemoval = true)
+        private List<IncidentCheckListItem> checklistItems;
 
-    @OneToMany(mappedBy = "incident", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<IncidentComment> comments;
+        @OneToMany(mappedBy = "incident", cascade = CascadeType.ALL, orphanRemoval = true)
+        private List<IncidentComment> comments;
 
-    @OneToMany(mappedBy = "incident", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<IncidentHistory> history;
+        @OneToMany(mappedBy = "incident", cascade = CascadeType.ALL, orphanRemoval = true)
+        private List<IncidentHistory> history;
 
-    @OrderBy("id ASC")
-    @OneToMany(mappedBy = "incident", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<IncidentImage> images;
+        @OrderBy("id ASC")
+        @OneToMany(mappedBy = "incident", cascade = CascadeType.ALL, orphanRemoval = true)
+        private List<IncidentImage> images;
 
 }

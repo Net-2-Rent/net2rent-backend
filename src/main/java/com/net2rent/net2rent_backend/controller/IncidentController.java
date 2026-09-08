@@ -7,6 +7,7 @@ import com.net2rent.net2rent_backend.dto.RejectIncidentRequest;
 import com.net2rent.net2rent_backend.dto.request.CreateChecklistItemRequest;
 import com.net2rent.net2rent_backend.dto.request.CreateCommentRequest;
 import com.net2rent.net2rent_backend.dto.request.IncidentFilter;
+import com.net2rent.net2rent_backend.dto.request.ReorderChecklistRequest;
 import com.net2rent.net2rent_backend.dto.request.UpdateChecklistItemRequest;
 import com.net2rent.net2rent_backend.dto.response.ChecklistItemResponse;
 import com.net2rent.net2rent_backend.dto.response.GuestIncidentDetailResponse;
@@ -59,9 +60,9 @@ public class IncidentController {
     private final IncidentChecklistService incidentChecklistService;
 
     public IncidentController(IncidentService incidentService,
-                              IncidentTimelineService incidentTimelineService,
-                              IncidentCommentService incidentCommentService,
-                              IncidentChecklistService incidentChecklistService) {
+            IncidentTimelineService incidentTimelineService,
+            IncidentCommentService incidentCommentService,
+            IncidentChecklistService incidentChecklistService) {
         this.incidentService = incidentService;
         this.incidentTimelineService = incidentTimelineService;
         this.incidentCommentService = incidentCommentService;
@@ -103,7 +104,7 @@ public class IncidentController {
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public IncidentResponse getOne(@PathVariable Long id,
-                                   @AuthenticationPrincipal AuthUser user) {
+            @AuthenticationPrincipal AuthUser user) {
         return incidentService.getDetail(id, user);
     }
 
@@ -142,38 +143,38 @@ public class IncidentController {
     @PatchMapping("/{id}/classification")
     @PreAuthorize("hasAuthority('TRIAGE_INCIDENT')")
     public IncidentResponse classify(@PathVariable Long id,
-                                     @Valid @RequestBody ClassifyIncidentRequest request,
-                                     @AuthenticationPrincipal AuthUser user) {
+            @Valid @RequestBody ClassifyIncidentRequest request,
+            @AuthenticationPrincipal AuthUser user) {
         return incidentService.classify(id, request, user);
     }
 
     @PatchMapping("/{id}/urgent")
     @PreAuthorize("hasAuthority('TRIAGE_INCIDENT')")
     public IncidentResponse markUrgent(@PathVariable Long id,
-                                       @AuthenticationPrincipal AuthUser user) {
+            @AuthenticationPrincipal AuthUser user) {
         return incidentService.markUrgent(id, user);
     }
 
     @PatchMapping("/{id}/text")
     @PreAuthorize("hasAuthority('TRIAGE_INCIDENT')")
     public IncidentResponse correctText(@PathVariable Long id,
-                                        @Valid @RequestBody CorrectIncidentTextRequest request,
-                                        @AuthenticationPrincipal AuthUser user) {
+            @Valid @RequestBody CorrectIncidentTextRequest request,
+            @AuthenticationPrincipal AuthUser user) {
         return incidentService.correctText(id, request, user);
     }
 
     @PatchMapping("/{id}/reject")
     @PreAuthorize("hasAuthority('REJECT_INCIDENT')")
     public IncidentResponse reject(@PathVariable Long id,
-                                   @Valid @RequestBody RejectIncidentRequest request,
-                                   @AuthenticationPrincipal AuthUser user) {
+            @Valid @RequestBody RejectIncidentRequest request,
+            @AuthenticationPrincipal AuthUser user) {
         return incidentService.reject(id, request, user);
     }
 
     @GetMapping("/{id}/timeline")
     @PreAuthorize("isAuthenticated()")
     public List<TimelineItemResponse> timeline(@PathVariable Long id,
-                                               @AuthenticationPrincipal AuthUser user) {
+            @AuthenticationPrincipal AuthUser user) {
         return incidentTimelineService.getTimeline(id, user);
     }
 
@@ -197,17 +198,16 @@ public class IncidentController {
 
     @PostMapping("/{id}/checklist")
     @PreAuthorize("hasAuthority('MANAGE_CHECKLIST')")
-    public ResponseEntity<ChecklistItemResponse> addChecklistItem(
+    public List<ChecklistItemResponse> addChecklistItem(
             @PathVariable Long id,
             @Valid @RequestBody CreateChecklistItemRequest request,
             @AuthenticationPrincipal AuthUser user) {
-        ChecklistItemResponse created = incidentChecklistService.addItem(id, request, user);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        return incidentChecklistService.addItem(id, request, user);
     }
 
     @PatchMapping("/{id}/checklist/{itemId}")
     @PreAuthorize("hasAuthority('MANAGE_CHECKLIST')")
-    public ChecklistItemResponse setChecklistItemDone(
+    public List<ChecklistItemResponse> setChecklistItemDone(
             @PathVariable Long id,
             @PathVariable Long itemId,
             @Valid @RequestBody UpdateChecklistItemRequest request,
@@ -217,11 +217,19 @@ public class IncidentController {
 
     @DeleteMapping("/{id}/checklist/{itemId}")
     @PreAuthorize("hasAuthority('MANAGE_CHECKLIST')")
-    public ResponseEntity<Void> deleteChecklistItem(
+    public List<ChecklistItemResponse> deleteChecklistItem(
             @PathVariable Long id,
             @PathVariable Long itemId,
             @AuthenticationPrincipal AuthUser user) {
-        incidentChecklistService.deleteItem(id, itemId, user);
-        return ResponseEntity.noContent().build();
+        return incidentChecklistService.deleteItem(id, itemId, user);
+    }
+
+    @PatchMapping("/{id}/checklist/order")
+    @PreAuthorize("hasAuthority('MANAGE_CHECKLIST')")
+    public List<ChecklistItemResponse> reorderChecklist(
+            @PathVariable Long id,
+            @Valid @RequestBody ReorderChecklistRequest request,
+            @AuthenticationPrincipal AuthUser user) {
+        return incidentChecklistService.reorder(id, request, user);
     }
 }
