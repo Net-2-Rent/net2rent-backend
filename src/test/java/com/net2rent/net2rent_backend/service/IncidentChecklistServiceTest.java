@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import com.net2rent.net2rent_backend.dto.request.CreateChecklistItemRequest;
+import com.net2rent.net2rent_backend.dto.request.ReorderChecklistRequest;
 import com.net2rent.net2rent_backend.dto.request.UpdateChecklistItemRequest;
 import com.net2rent.net2rent_backend.dto.response.ChecklistItemResponse;
 import com.net2rent.net2rent_backend.exception.ConflictException;
@@ -29,7 +30,6 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -55,26 +55,41 @@ class IncidentChecklistServiceTest {
                 checklistItemRepository, userRepository, clock);
     }
 
-    // ---------- addItem (CU-CHK-01/02) ----------
+    private IncidentCheckListItem item(Long id, Incident incident, String text, boolean done) {
+        return IncidentCheckListItem.builder()
+                .id(id).incident(incident).text(text).done(done).position(0).build();
+    }
+
+    // ================= addItem =================
 
     @Test
-    void addItem_onOpenIncident_savesAndReturnsItem() {
+    void addItem_claimsNewItemAndReturnsCompleteList() {
         Incident incident = Incident.builder().id(5L).status(IncidentStatus.IN_PROGRESS).build();
         CreateChecklistItemRequest request = new CreateChecklistItemRequest("Revisar termostato");
 
         when(incidentService.getOwnedByAccountOr404(5L, coordinator)).thenReturn(incident);
-        when(checklistItemRepository.save(any(IncidentCheckListItem.class)))
+
+        // save MUTA el objeto arg asignándole id 99 (como hace Hibernate), porque el
+        // servicio addItem NO captura el retorno de save() sino que usa item.getId().
+        doAnswer(inv -> {
+            IncidentCheckListItem arg = inv.getArgument(0);
+            arg.setId(99L);
+            return arg;
+        }).when(checklistItemRepository).save(any(IncidentCheckListItem.class));
+
+        // La consulta devuelve la lista que ya incluye el nuevo item (id 99)
+        when(checklistItemRepository.findByIncident_IdOrderByPositionAscIdAsc(5L))
+                .thenReturn(List.of(item(1L, incident, "a", false),
+                        item(99L, incident, "Revisar termostato", false),
+                        item(2L, incident, "b", true)));
+        when(checklistItemRepository.saveAll(anyList()))
                 .thenAnswer(inv -> inv.getArgument(0));
 
-        ChecklistItemResponse res = service.addItem(5L, request, coordinator);
+        List<ChecklistItemResponse> res = service.addItem(5L, request, coordinator);
 
-        assertEquals("Revisar termostato", res.text());
-        assertFalse(res.done());
-
-        ArgumentCaptor<IncidentCheckListItem> captor = ArgumentCaptor.forClass(IncidentCheckListItem.class);
-        verify(checklistItemRepository).save(captor.capture());
-        assertSame(incident, captor.getValue().getIncident());
-        assertFalse(captor.getValue().isDone());
+        verify(checklistItemRepository).save(any(IncidentCheckListItem.class));
+        verify(checklistItemRepository).saveAll(anyList());
+        assertEquals(3, res.size());
     }
 
     @Test
@@ -109,13 +124,12 @@ class IncidentChecklistServiceTest {
         verifyNoInteractions(incidentAccessPolicy, checklistItemRepository);
     }
 
-    // ---------- setDone (CU-CHK-03/04) ----------
+    // ================= setDone =================
 
     @Test
     void setDone_marksItem_andRecordsWhoAndWhen() {
         Incident incident = Incident.builder().id(5L).status(IncidentStatus.IN_PROGRESS).build();
-        IncidentCheckListItem item = IncidentCheckListItem.builder()
-                .id(30L).incident(incident).text("Revisar termostato").done(false).build();
+        IncidentCheckListItem item = item(30L, incident, "Revisar termostato", false);
         AppUser actor = AppUser.builder().id(10L).firstName("Pau").lastName("Roig").build();
 
         when(incidentService.getOwnedByAccountOr404(5L, coordinator)).thenReturn(incident);
@@ -124,11 +138,18 @@ class IncidentChecklistServiceTest {
         when(checklistItemRepository.save(any(IncidentCheckListItem.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
 
-        ChecklistItemResponse res = service.setDone(5L, 30L, new UpdateChecklistItemRequest(true), coordinator);
+        // setDone: 1ª consulta (reconstruir) y persistOrder vuelve a consultar → mismo stub
+        when(checklistItemRepository.findByIncident_IdOrderByPositionAscIdAsc(5L))
+                .thenReturn(List.of(item));
+        when(checklistItemRepository.saveAll(anyList()))
+                .thenAnswer(inv -> inv.getArgument(0));
 
-        assertTrue(res.done());
-        assertEquals("Pau Roig", res.checkedByName());
-        assertEquals(LocalDateTime.of(2026, 9, 7, 8, 0), res.checkedAt());
+        List<ChecklistItemResponse> res =
+                service.setDone(5L, 30L, new UpdateChecklistItemRequest(true), coordinator);
+
+        assertTrue(res.get(0).done());
+        assertEquals("Pau Roig", res.get(0).checkedByName());
+        assertEquals(LocalDateTime.of(2026, 9, 7, 8, 0), res.get(0).checkedAt());
     }
 
     @Test
@@ -152,19 +173,25 @@ class IncidentChecklistServiceTest {
         verify(checklistItemRepository, never()).save(any());
     }
 
-    // ---------- deleteItem (CU-CHK-05) ----------
+    // ================= deleteItem =================
 
     @Test
-    void deleteItem_removesItem() {
+    void deleteItem_removesItem_andReindexes() {
         Incident incident = Incident.builder().id(5L).status(IncidentStatus.IN_PROGRESS).build();
-        IncidentCheckListItem item = IncidentCheckListItem.builder().id(30L).incident(incident).build();
+        IncidentCheckListItem item = item(30L, incident, "x", false);
 
         when(incidentService.getOwnedByAccountOr404(5L, coordinator)).thenReturn(incident);
         when(checklistItemRepository.findByIdAndIncident_Id(30L, 5L)).thenReturn(Optional.of(item));
+        // deleteItem: 1ª consulta (tras delete) y persistOrder vuelve a consultar → mismo stub
+        when(checklistItemRepository.findByIncident_IdOrderByPositionAscIdAsc(5L))
+                .thenReturn(List.of(item(31L, incident, "y", false)));
+        when(checklistItemRepository.saveAll(anyList()))
+                .thenAnswer(inv -> inv.getArgument(0));
 
-        service.deleteItem(5L, 30L, coordinator);
+        List<ChecklistItemResponse> res = service.deleteItem(5L, 30L, coordinator);
 
         verify(checklistItemRepository).delete(item);
+        assertEquals(1, res.size());
     }
 
     @Test
@@ -187,21 +214,92 @@ class IncidentChecklistServiceTest {
         verify(checklistItemRepository, never()).delete(any());
     }
 
-    // ---------- list ----------
+    // ================= list =================
 
     @Test
-    void list_returnsItemsInRepositoryOrder() {
+    void list_returnsItemsInPositionOrder() {
         Incident incident = Incident.builder().id(5L).status(IncidentStatus.IN_PROGRESS).build();
-        IncidentCheckListItem item1 = IncidentCheckListItem.builder().id(1L).incident(incident).text("a").build();
-        IncidentCheckListItem item2 = IncidentCheckListItem.builder().id(2L).incident(incident).text("b").build();
+        IncidentCheckListItem item1 = item(1L, incident, "a", false);
+        item1.setPosition(0);
+        IncidentCheckListItem item2 = item(2L, incident, "b", true);
+        item2.setPosition(1);
 
         when(incidentService.getOwnedByAccountOr404(5L, coordinator)).thenReturn(incident);
-        when(checklistItemRepository.findByIncident_IdOrderByIdAsc(5L)).thenReturn(List.of(item1, item2));
+        when(checklistItemRepository.findByIncident_IdOrderByPositionAscIdAsc(5L))
+                .thenReturn(List.of(item1, item2));
 
         List<ChecklistItemResponse> res = service.list(5L, coordinator);
 
         assertEquals(2, res.size());
         assertEquals("a", res.get(0).text());
+        assertEquals(0, res.get(0).position());
         assertEquals("b", res.get(1).text());
+        assertEquals(1, res.get(1).position());
+    }
+
+    // ================= reorder =================
+
+    @Test
+    void reorder_reassignsDensePositionsAndReturnsList() {
+        Incident incident = Incident.builder().id(5L).status(IncidentStatus.IN_PROGRESS).build();
+        IncidentCheckListItem itemA = item(1L, incident, "a", false);
+        IncidentCheckListItem itemB = item(2L, incident, "b", false);
+        IncidentCheckListItem itemC = item(3L, incident, "c", true);
+
+        when(incidentService.getOwnedByAccountOr404(5L, coordinator)).thenReturn(incident);
+        when(checklistItemRepository.findByIncident_IdOrderByPositionAscIdAsc(5L))
+                .thenReturn(List.of(itemA, itemB, itemC));
+        when(checklistItemRepository.saveAll(anyList()))
+                .thenAnswer(inv -> inv.getArgument(0));
+
+        ReorderChecklistRequest request = new ReorderChecklistRequest(List.of(3L, 1L, 2L));
+        List<ChecklistItemResponse> res = service.reorder(5L, request, coordinator);
+
+        assertEquals(3, res.size());
+        assertEquals(1, res.get(0).position()); // a → pos 1
+        assertEquals(2, res.get(1).position()); // b → pos 2
+        assertEquals(0, res.get(2).position()); // c → pos 0
+    }
+
+    @Test
+    void reorder_withWrongIdSet_throwsConflict() {
+        Incident incident = Incident.builder().id(5L).status(IncidentStatus.IN_PROGRESS).build();
+        IncidentCheckListItem itemA = item(1L, incident, "a", false);
+        IncidentCheckListItem itemB = item(2L, incident, "b", false);
+
+        when(incidentService.getOwnedByAccountOr404(5L, coordinator)).thenReturn(incident);
+        when(checklistItemRepository.findByIncident_IdOrderByPositionAscIdAsc(5L))
+                .thenReturn(List.of(itemA, itemB));
+
+        ReorderChecklistRequest request = new ReorderChecklistRequest(List.of(1L, 99L));
+
+        assertThrows(ConflictException.class, () -> service.reorder(5L, request, coordinator));
+        verify(checklistItemRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void reorder_withDuplicateIds_throwsConflict() {
+        Incident incident = Incident.builder().id(5L).status(IncidentStatus.IN_PROGRESS).build();
+        IncidentCheckListItem itemA = item(1L, incident, "a", false);
+        IncidentCheckListItem itemB = item(2L, incident, "b", false);
+
+        when(incidentService.getOwnedByAccountOr404(5L, coordinator)).thenReturn(incident);
+        when(checklistItemRepository.findByIncident_IdOrderByPositionAscIdAsc(5L))
+                .thenReturn(List.of(itemA, itemB));
+
+        ReorderChecklistRequest request = new ReorderChecklistRequest(List.of(1L, 1L, 2L));
+
+        assertThrows(ConflictException.class, () -> service.reorder(5L, request, coordinator));
+        verify(checklistItemRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void reorder_onClosedIncident_throws409() {
+        Incident closed = Incident.builder().id(5L).status(IncidentStatus.CLOSED).build();
+        when(incidentService.getOwnedByAccountOr404(5L, coordinator)).thenReturn(closed);
+
+        assertThrows(ConflictException.class,
+                () -> service.reorder(5L, new ReorderChecklistRequest(List.of(1L)), coordinator));
+        verify(checklistItemRepository, never()).saveAll(any());
     }
 }

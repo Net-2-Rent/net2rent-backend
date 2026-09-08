@@ -8,7 +8,7 @@ import java.util.Optional;
 
 public interface IncidentCheckListItemRepository extends JpaRepository<IncidentCheckListItem, Long> {
 
-    List<IncidentCheckListItem> findByIncident_IdOrderByIdAsc(Long incidentId);
+    List<IncidentCheckListItem> findByIncident_IdOrderByPositionAscIdAsc(Long incidentId);
 
     Optional<IncidentCheckListItem> findByIdAndIncident_Id(Long id, Long incidentId);
 }

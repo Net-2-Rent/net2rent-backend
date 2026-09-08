@@ -4,24 +4,26 @@ import java.time.LocalDateTime;
 import com.net2rent.net2rent_backend.model.Incident;
 
 public record IncidentResponse(
-        Long id,
-        String code,
-        String status,
-        String priority,
-        String category,
-        String title,
-        String description,
-        String guestFirstName,
-        String guestLastName,
-        String guestContact,
-        String lodgingRef,
-        String lodgingName,
-        String lodgingAddress,
-        String lodgingAccessNotes,
-        String assigneeName,
-        LocalDateTime openedAt,
-        LocalDateTime startedAt,
-        String pauseReason) {
+                Long id,
+                String code,
+                String status,
+                String rejectionReason,
+                String priority,
+                String category,
+                String title,
+                String description,
+                String guestFirstName,
+                String guestLastName,
+                String guestContact,
+                String lodgingRef,
+                String lodgingName,
+                String lodgingAddress,
+                String lodgingAccessNotes,
+                String assigneeName,
+                LocalDateTime openedAt
+                LocalDateTime openedAt,
+                LocalDateTime startedAt,
+                String pauseReason) {
         public static IncidentResponse from(Incident i) {
                 String assigneeName = (i.getAssignee() == null)
                         ? null
@@ -31,6 +33,7 @@ public record IncidentResponse(
                         i.getId(),
                         i.getCode(),
                         i.getStatus() == null ? null : i.getStatus().name(),
+                        i.getRejectionReason(),
                         i.getPriority() == null ? null : i.getPriority().name(),
                         i.getCategory() == null ? null : i.getCategory().name(),
                         i.getTitle(),
