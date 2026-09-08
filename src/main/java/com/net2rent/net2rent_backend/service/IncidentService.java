@@ -12,6 +12,7 @@ import com.net2rent.net2rent_backend.dto.response.GuestIncidentResponse;
 import com.net2rent.net2rent_backend.dto.response.IncidentListResponse;
 import com.net2rent.net2rent_backend.dto.response.IncidentSummaryResponse;
 import com.net2rent.net2rent_backend.dto.response.PagedResponse;
+import com.net2rent.net2rent_backend.model.enums.*;
 import com.net2rent.net2rent_backend.security.GuestPrincipal;
 import com.net2rent.net2rent_backend.exception.ConflictException;
 import com.net2rent.net2rent_backend.exception.NotFoundException;
@@ -20,12 +21,6 @@ import com.net2rent.net2rent_backend.model.AppUser;
 import com.net2rent.net2rent_backend.model.Incident;
 import com.net2rent.net2rent_backend.model.IncidentCounter;
 import com.net2rent.net2rent_backend.model.Lodging;
-import com.net2rent.net2rent_backend.model.enums.IncidentCategory;
-import com.net2rent.net2rent_backend.model.enums.IncidentEventType;
-import com.net2rent.net2rent_backend.model.enums.IncidentPriority;
-import com.net2rent.net2rent_backend.model.enums.IncidentSource;
-import com.net2rent.net2rent_backend.model.enums.IncidentStatus;
-import com.net2rent.net2rent_backend.model.enums.UserRole;
 import com.net2rent.net2rent_backend.repository.IncidentCounterRepository;
 import com.net2rent.net2rent_backend.repository.IncidentRepository;
 import com.net2rent.net2rent_backend.repository.LodgingRepository;
@@ -79,13 +74,14 @@ public class IncidentService {
                                      SortField sortField,
                                      Sort.Direction direction,
                                      Pageable pageable,
-                                     AuthUser user) {
+                                     AuthUser user,
+                                     OperatorScope scope) {
         Long operatorUserId = UserRole.OPERATOR.name().equals(user.role())
                 ? user.userId()
                 : null;
 
         Specification<Incident> filterSpec =
-                IncidentSpecifications.forListing(user.accountId(), filter, operatorUserId);
+                IncidentSpecifications.forListing(user.accountId(), filter, operatorUserId, scope);
 
         Page<Incident> page = incidentRepository.findAll(
                 filterSpec.and(IncidentSpecifications.orderBy(sortField, direction)),
@@ -292,6 +288,34 @@ public class IncidentService {
 
         incidentHistoryService.record(incident, actor, IncidentEventType.STATUS_CHANGED,
                 current.name(), IncidentStatus.REJECTED.name(), now);
+
+        incidentRepository.save(incident);
+        return IncidentResponse.from(incident);
+    }
+
+    // ---------- autoassign from the pool ----------
+    @Transactional
+    public IncidentResponse claim(Long incidentId, AuthUser user) {
+        Incident incident = incidentRepository
+                .findByIdAndAccount_IdForUpdate(incidentId, user.accountId())
+                .orElseThrow(() -> new NotFoundException("Incidencia no encontrada"));
+
+        if (incident.getAssignee() != null) {
+            throw new ConflictException("Esta incidencia ya ha sido asignada");
+        }
+        if (incident.getStatus() != IncidentStatus.NEW) {
+            throw new ConflictException("La incidencia no está disponible en el pool");
+        }
+
+        LocalDateTime now = LocalDateTime.now(clock);
+        AppUser operator = userRepository.getReferenceById(user.userId());
+
+        incident.setAssignee(operator);
+        incident.setStatus(IncidentStatus.ASSIGNED);
+        incident.setAssignedAt(now);
+
+        incidentHistoryService.record(incident, operator, IncidentEventType.ASSIGNED,
+                null, operator.getId().toString(), now);
 
         incidentRepository.save(incident);
         return IncidentResponse.from(incident);

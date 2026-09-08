@@ -5,6 +5,7 @@ import com.net2rent.net2rent_backend.model.Incident;
 import com.net2rent.net2rent_backend.model.enums.IncidentCategory;
 import com.net2rent.net2rent_backend.model.enums.IncidentPriority;
 import com.net2rent.net2rent_backend.model.enums.IncidentStatus;
+import com.net2rent.net2rent_backend.model.enums.OperatorScope;
 import org.springframework.data.jpa.domain.Specification;
 
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -72,7 +73,7 @@ public final class IncidentSpecifications {
         );
     }
 
-    public static Specification<Incident> forListing(Long accountId, IncidentFilter f, Long operatorUserId) {
+    public static Specification<Incident> forListing(Long accountId, IncidentFilter f, Long operatorUserId, OperatorScope scope) {
         List<Specification<Incident>> specs = new ArrayList<>();
         specs.add(inAccount(accountId));
         specs.add(hasStatus(f.status()));
@@ -90,7 +91,9 @@ public final class IncidentSpecifications {
         specs.add(openedTo(f.openedTo()));
 
         if (operatorUserId != null) {
-            specs.add(visibleToOperator(operatorUserId));
+            if (scope == OperatorScope.POOL)      specs.add(unassigned());
+            else if (scope == OperatorScope.MINE) specs.add(assignedTo(operatorUserId));
+            else                                  specs.add(visibleToOperator(operatorUserId));
         }
 
         return specs.stream().reduce(Specification::and).orElse(null);
@@ -128,5 +131,12 @@ public final class IncidentSpecifications {
                 .when(cb.equal(root.get("priority"), IncidentPriority.NORMAL), 2)
                 .when(cb.equal(root.get("priority"), IncidentPriority.LOW), 3)
                 .otherwise(4);
+    }
+
+    public static Specification<Incident> assignedTo(Long operatorUserId) {
+        return (root, query, cb) -> cb.and(
+                cb.equal(root.get("assignee").get("id"), operatorUserId),
+                root.get("status").in(IncidentStatus.CLOSED, IncidentStatus.REJECTED).not()
+        );
     }
 }
