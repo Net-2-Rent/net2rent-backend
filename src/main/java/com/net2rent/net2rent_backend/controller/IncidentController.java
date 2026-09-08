@@ -171,6 +171,13 @@ public class IncidentController {
         return incidentService.reject(id, request, user);
     }
 
+    @PatchMapping("/{id}/claim")
+    @PreAuthorize("hasAuthority('SELF_ASSIGN_FROM_POOL')")
+    public IncidentResponse claim(@PathVariable Long id,
+                                  @AuthenticationPrincipal AuthUser user) {
+        return incidentService.claim(id, user);
+    }
+
     @GetMapping("/{id}/timeline")
     @PreAuthorize("isAuthenticated()")
     public List<TimelineItemResponse> timeline(@PathVariable Long id,
