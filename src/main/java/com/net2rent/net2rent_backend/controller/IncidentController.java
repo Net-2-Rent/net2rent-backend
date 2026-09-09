@@ -175,6 +175,13 @@ public class IncidentController {
         return incidentService.claim(id, user);
     }
 
+    @PatchMapping("/{id}/close")
+    @PreAuthorize("hasAuthority('CLOSE_INCIDENT')")
+    public IncidentResponse close(@PathVariable Long id,
+                                  @AuthenticationPrincipal AuthUser user) {
+        return incidentService.close(id, user);
+    }
+
     @PatchMapping("/{id}/start")
     @PreAuthorize("hasAuthority('WORK_INCIDENT')")
     public IncidentResponse start(@PathVariable Long id,

@@ -294,6 +294,32 @@ public class IncidentService {
         return IncidentResponse.from(incident);
     }
 
+    // ---------- CU-EXE-07: cerrar incidencia resuelta ----------
+
+    @Transactional
+    public IncidentResponse close(Long incidentId, AuthUser user) {
+        Incident incident = getOwnedByAccountOr404(incidentId, user);   // 404 por cuenta (ADR-001)
+
+        IncidentStatus current = incident.getStatus();
+        // Única transición válida: RESOLVED -> CLOSED.
+        // Con esta sola guarda, CLOSED / REJECTED / NEW / IN_PROGRESS... caen todos en el mismo 409.
+        if (current != IncidentStatus.RESOLVED) {
+            throw new ConflictException("Solo se puede cerrar una incidencia resuelta");
+        }
+
+        LocalDateTime now = LocalDateTime.now(clock);
+        AppUser actor = userRepository.getReferenceById(user.userId());
+
+        incident.setStatus(IncidentStatus.CLOSED);
+        incident.setClosedAt(now);                                       // sella closedAt (el campo ya existe en la entidad)
+
+        incidentHistoryService.record(incident, actor, IncidentEventType.STATUS_CHANGED,
+                current.name(), IncidentStatus.CLOSED.name(), now);
+
+        incidentRepository.save(incident);
+        return IncidentResponse.from(incident);
+    }
+
     // ---------- autoassign from the pool ----------
     @Transactional
     public IncidentResponse claim(Long incidentId, AuthUser user) {
