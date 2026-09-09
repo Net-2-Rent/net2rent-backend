@@ -1,9 +1,6 @@
 package com.net2rent.net2rent_backend.controller;
 
-import com.net2rent.net2rent_backend.dto.ClassifyIncidentRequest;
-import com.net2rent.net2rent_backend.dto.CorrectIncidentTextRequest;
-import com.net2rent.net2rent_backend.dto.IncidentResponse;
-import com.net2rent.net2rent_backend.dto.RejectIncidentRequest;
+import com.net2rent.net2rent_backend.dto.*;
 import com.net2rent.net2rent_backend.dto.request.CreateChecklistItemRequest;
 import com.net2rent.net2rent_backend.dto.request.CreateCommentRequest;
 import com.net2rent.net2rent_backend.dto.request.IncidentFilter;
@@ -21,11 +18,8 @@ import com.net2rent.net2rent_backend.model.enums.IncidentStatus;
 import com.net2rent.net2rent_backend.model.enums.OperatorScope;
 import com.net2rent.net2rent_backend.repository.spec.SortField;
 import com.net2rent.net2rent_backend.security.AuthUser;
-import com.net2rent.net2rent_backend.service.IncidentChecklistService;
-import com.net2rent.net2rent_backend.service.IncidentCommentService;
+import com.net2rent.net2rent_backend.service.*;
 import com.net2rent.net2rent_backend.security.GuestPrincipal;
-import com.net2rent.net2rent_backend.service.IncidentService;
-import com.net2rent.net2rent_backend.service.IncidentTimelineService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -58,15 +52,18 @@ public class IncidentController {
     private final IncidentTimelineService incidentTimelineService;
     private final IncidentCommentService incidentCommentService;
     private final IncidentChecklistService incidentChecklistService;
+    private final IncidentExecutionService incidentExecutionService;
 
     public IncidentController(IncidentService incidentService,
-            IncidentTimelineService incidentTimelineService,
-            IncidentCommentService incidentCommentService,
-            IncidentChecklistService incidentChecklistService) {
+                              IncidentTimelineService incidentTimelineService,
+                              IncidentCommentService incidentCommentService,
+                              IncidentChecklistService incidentChecklistService,
+                              IncidentExecutionService incidentExecutionService) {
         this.incidentService = incidentService;
         this.incidentTimelineService = incidentTimelineService;
         this.incidentCommentService = incidentCommentService;
         this.incidentChecklistService = incidentChecklistService;
+        this.incidentExecutionService = incidentExecutionService;
     }
 
     @GetMapping
@@ -104,7 +101,7 @@ public class IncidentController {
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public IncidentResponse getOne(@PathVariable Long id,
-            @AuthenticationPrincipal AuthUser user) {
+                                   @AuthenticationPrincipal AuthUser user) {
         return incidentService.getDetail(id, user);
     }
 
@@ -143,31 +140,31 @@ public class IncidentController {
     @PatchMapping("/{id}/classification")
     @PreAuthorize("hasAuthority('TRIAGE_INCIDENT')")
     public IncidentResponse classify(@PathVariable Long id,
-            @Valid @RequestBody ClassifyIncidentRequest request,
-            @AuthenticationPrincipal AuthUser user) {
+                                     @Valid @RequestBody ClassifyIncidentRequest request,
+                                     @AuthenticationPrincipal AuthUser user) {
         return incidentService.classify(id, request, user);
     }
 
     @PatchMapping("/{id}/urgent")
     @PreAuthorize("hasAuthority('TRIAGE_INCIDENT')")
     public IncidentResponse markUrgent(@PathVariable Long id,
-            @AuthenticationPrincipal AuthUser user) {
+                                       @AuthenticationPrincipal AuthUser user) {
         return incidentService.markUrgent(id, user);
     }
 
     @PatchMapping("/{id}/text")
     @PreAuthorize("hasAuthority('TRIAGE_INCIDENT')")
     public IncidentResponse correctText(@PathVariable Long id,
-            @Valid @RequestBody CorrectIncidentTextRequest request,
-            @AuthenticationPrincipal AuthUser user) {
+                                        @Valid @RequestBody CorrectIncidentTextRequest request,
+                                        @AuthenticationPrincipal AuthUser user) {
         return incidentService.correctText(id, request, user);
     }
 
     @PatchMapping("/{id}/reject")
     @PreAuthorize("hasAuthority('REJECT_INCIDENT')")
     public IncidentResponse reject(@PathVariable Long id,
-            @Valid @RequestBody RejectIncidentRequest request,
-            @AuthenticationPrincipal AuthUser user) {
+                                   @Valid @RequestBody RejectIncidentRequest request,
+                                   @AuthenticationPrincipal AuthUser user) {
         return incidentService.reject(id, request, user);
     }
 
@@ -178,10 +175,32 @@ public class IncidentController {
         return incidentService.claim(id, user);
     }
 
+    @PatchMapping("/{id}/start")
+    @PreAuthorize("hasAuthority('WORK_INCIDENT')")
+    public IncidentResponse start(@PathVariable Long id,
+                                  @AuthenticationPrincipal AuthUser user) {
+        return incidentExecutionService.start(id, user);
+    }
+
+    @PatchMapping("/{id}/pause")
+    @PreAuthorize("hasAuthority('WORK_INCIDENT')")
+    public IncidentResponse pause(@PathVariable Long id,
+                                  @Valid @RequestBody PauseIncidentRequest request,
+                                  @AuthenticationPrincipal AuthUser user) {
+        return incidentExecutionService.pause(id, request, user);
+    }
+
+    @PatchMapping("/{id}/resume")
+    @PreAuthorize("hasAuthority('WORK_INCIDENT')")
+    public IncidentResponse resume(@PathVariable Long id,
+                                   @AuthenticationPrincipal AuthUser user) {
+        return incidentExecutionService.resume(id, user);
+    }
+
     @GetMapping("/{id}/timeline")
     @PreAuthorize("isAuthenticated()")
     public List<TimelineItemResponse> timeline(@PathVariable Long id,
-            @AuthenticationPrincipal AuthUser user) {
+                                               @AuthenticationPrincipal AuthUser user) {
         return incidentTimelineService.getTimeline(id, user);
     }
 

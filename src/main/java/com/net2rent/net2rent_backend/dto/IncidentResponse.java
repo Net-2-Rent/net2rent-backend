@@ -20,29 +20,33 @@ public record IncidentResponse(
                 String lodgingAddress,
                 String lodgingAccessNotes,
                 String assigneeName,
-                LocalDateTime openedAt) {
+                LocalDateTime openedAt,
+                LocalDateTime startedAt,
+                String pauseReason) {
         public static IncidentResponse from(Incident i) {
                 String assigneeName = (i.getAssignee() == null)
-                                ? null
-                                : i.getAssignee().getFirstName() + " " + i.getAssignee().getLastName();
+                        ? null
+                        : i.getAssignee().getFirstName() + " " + i.getAssignee().getLastName();
 
                 return new IncidentResponse(
-                                i.getId(),
-                                i.getCode(),
-                                i.getStatus() == null ? null : i.getStatus().name(),
-                                i.getRejectionReason(),
-                                i.getPriority() == null ? null : i.getPriority().name(),
-                                i.getCategory() == null ? null : i.getCategory().name(),
-                                i.getTitle(),
-                                i.getDescription(),
-                                i.getGuestFirstName(),
-                                i.getGuestLastName(),
-                                i.getGuestContact(),
-                                i.getLodging() == null ? null : i.getLodging().getRef(),
-                                i.getLodging() == null ? null : i.getLodging().getName(),
-                                i.getLodging() == null ? null : i.getLodging().getAddress(),
-                                i.getLodging() == null ? null : i.getLodging().getAccessNotes(),
-                                assigneeName,
-                                i.getOpenedAt());
+                        i.getId(),
+                        i.getCode(),
+                        i.getStatus() == null ? null : i.getStatus().name(),
+                        i.getRejectionReason(),
+                        i.getPriority() == null ? null : i.getPriority().name(),
+                        i.getCategory() == null ? null : i.getCategory().name(),
+                        i.getTitle(),
+                        i.getDescription(),
+                        i.getGuestFirstName(),
+                        i.getGuestLastName(),
+                        i.getGuestContact(),
+                        i.getLodging() == null ? null : i.getLodging().getRef(),
+                        i.getLodging() == null ? null : i.getLodging().getName(),
+                        i.getLodging() == null ? null : i.getLodging().getAddress(),
+                        i.getLodging() == null ? null : i.getLodging().getAccessNotes(),
+                        assigneeName,
+                        i.getOpenedAt(),
+                        i.getStartedAt(),
+                        i.getPauseReason());
         }
 }
