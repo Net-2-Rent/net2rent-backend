@@ -2,6 +2,7 @@ package com.net2rent.net2rent_backend.service;
 
 import com.net2rent.net2rent_backend.dto.IncidentResponse;
 import com.net2rent.net2rent_backend.dto.PauseIncidentRequest;
+import com.net2rent.net2rent_backend.dto.ResolveIncidentRequest;
 import com.net2rent.net2rent_backend.exception.ConflictException;
 import com.net2rent.net2rent_backend.model.AppUser;
 import com.net2rent.net2rent_backend.model.Incident;
@@ -26,19 +27,22 @@ public class IncidentExecutionService {
     private final IncidentHistoryService incidentHistoryService;
     private final UserRepository userRepository;
     private final Clock clock;
+    private final IncidentChecklistService incidentChecklistService;
 
     public IncidentExecutionService(IncidentService incidentService,
                                     IncidentAccessPolicy incidentAccessPolicy,
                                     IncidentRepository incidentRepository,
                                     IncidentHistoryService incidentHistoryService,
                                     UserRepository userRepository,
-                                    Clock clock) {
+                                    Clock clock,
+                                    IncidentChecklistService incidentChecklistService) {
         this.incidentService = incidentService;
         this.incidentAccessPolicy = incidentAccessPolicy;
         this.incidentRepository = incidentRepository;
         this.incidentHistoryService = incidentHistoryService;
         this.userRepository = userRepository;
         this.clock = clock;
+        this.incidentChecklistService = incidentChecklistService;
     }
 
     // ---------- CU-EXE-03: start ----------
@@ -110,6 +114,44 @@ public class IncidentExecutionService {
 
         incidentHistoryService.record(incident, actor, IncidentEventType.STATUS_CHANGED,
                 current.name(), IncidentStatus.IN_PROGRESS.name(), now);
+
+        incidentRepository.save(incident);
+        return IncidentResponse.from(incident);
+    }
+
+    // ---------- CU-EXE-06: resolve ----------
+
+    @Transactional
+    public IncidentResponse resolve(Long incidentId, ResolveIncidentRequest request, AuthUser user) {
+        Incident incident = incidentService.getOwnedByAccountOr404(incidentId, user);
+        incidentAccessPolicy.ensureCanActOn(incident, user);
+
+        IncidentStatus current = incident.getStatus();
+        if (current != IncidentStatus.IN_PROGRESS && current != IncidentStatus.PAUSED) {
+            throw new ConflictException("No se puede resolver una incidencia en estado " + current);
+        }
+
+        if (incident.getCategory() == null) {
+            throw new ConflictException("La incidencia necesita una categoría");
+        }
+
+        long pending = incidentChecklistService.countPending(incidentId);
+        if (pending > 0) {
+            throw new ConflictException("Quedan " + pending + " tareas del checklist sin completar");
+        }
+
+        LocalDateTime now = LocalDateTime.now(clock);
+        AppUser actor = userRepository.getReferenceById(user.userId());
+
+        incident.setStatus(IncidentStatus.RESOLVED);
+        incident.setResolvedAt(now);
+        incident.setMinutesSpent(request.minutes());
+        incident.setResolutionNote(request.note().strip());
+
+        incidentHistoryService.record(incident, actor, IncidentEventType.STATUS_CHANGED,
+                current.name(), IncidentStatus.RESOLVED.name(), now);
+        incidentHistoryService.record(incident, actor, IncidentEventType.TIME_LOGGED,
+                null, String.valueOf(request.minutes()), now);
 
         incidentRepository.save(incident);
         return IncidentResponse.from(incident);
