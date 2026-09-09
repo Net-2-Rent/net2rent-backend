@@ -293,6 +293,34 @@ public class IncidentService {
         return IncidentResponse.from(incident);
     }
 
+    // ---------- autoassign from the pool ----------
+    @Transactional
+    public IncidentResponse claim(Long incidentId, AuthUser user) {
+        Incident incident = incidentRepository
+                .findByIdAndAccount_IdForUpdate(incidentId, user.accountId())
+                .orElseThrow(() -> new NotFoundException("Incidencia no encontrada"));
+
+        if (incident.getAssignee() != null) {
+            throw new ConflictException("Esta incidencia ya ha sido asignada");
+        }
+        if (incident.getStatus() != IncidentStatus.NEW) {
+            throw new ConflictException("La incidencia no está disponible en el pool");
+        }
+
+        LocalDateTime now = LocalDateTime.now(clock);
+        AppUser operator = userRepository.getReferenceById(user.userId());
+
+        incident.setAssignee(operator);
+        incident.setStatus(IncidentStatus.ASSIGNED);
+        incident.setAssignedAt(now);
+
+        incidentHistoryService.record(incident, operator, IncidentEventType.ASSIGNED,
+                null, operator.getId().toString(), now);
+
+        incidentRepository.save(incident);
+        return IncidentResponse.from(incident);
+    }
+
     // ---------- Alta desde el portal del huésped ----------
 
     @Transactional
