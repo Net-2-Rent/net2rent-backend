@@ -201,6 +201,7 @@ public class IncidentService {
     @Transactional
     public IncidentResponse classify(Long incidentId, ClassifyIncidentRequest request, AuthUser user) {
         Incident incident = getOwnedByAccountOr404(incidentId, user);
+        ensureNotTerminal(incident);
         LocalDateTime now = LocalDateTime.now(clock);
         AppUser actorEntity = userRepository.getReferenceById(user.userId());
 
@@ -227,6 +228,7 @@ public class IncidentService {
     @Transactional
     public IncidentResponse markUrgent(Long incidentId, AuthUser user) {
         Incident incident = getOwnedByAccountOr404(incidentId, user);
+        ensureNotTerminal(incident);
 
         IncidentPriority oldPriority = incident.getPriority();
         if (oldPriority != IncidentPriority.URGENT) {
@@ -244,6 +246,7 @@ public class IncidentService {
     @Transactional
     public IncidentResponse correctText(Long incidentId, CorrectIncidentTextRequest request, AuthUser user) {
         Incident incident = getOwnedByAccountOr404(incidentId, user);
+        ensureNotTerminal(incident);
         LocalDateTime now = LocalDateTime.now(clock);
         AppUser actorEntity = userRepository.getReferenceById(user.userId());
 
@@ -273,9 +276,7 @@ public class IncidentService {
         Incident incident = getOwnedByAccountOr404(incidentId, user);
 
         IncidentStatus current = incident.getStatus();
-        if (current == IncidentStatus.CLOSED || current == IncidentStatus.REJECTED) {
-            throw new ConflictException("La incidencia está cerrada"); // CU-INC-13
-        }
+        ensureNotTerminal(incident);
         if (current == IncidentStatus.RESOLVED) {
             throw new ConflictException("No se puede rechazar una incidencia ya resuelta");
         }
@@ -403,5 +404,12 @@ public class IncidentService {
 
     private static String nameOrNull(Enum<?> value) {
         return value == null ? null : value.name();
+    }
+
+    private void ensureNotTerminal(Incident incident) {
+        IncidentStatus status = incident.getStatus();
+        if (status == IncidentStatus.CLOSED || status == IncidentStatus.REJECTED) {
+            throw new ConflictException("La incidencia está cerrada");
+        }
     }
 }
