@@ -10,6 +10,7 @@ import com.net2rent.net2rent_backend.model.IncidentComment;
 import com.net2rent.net2rent_backend.model.IncidentHistory;
 import com.net2rent.net2rent_backend.repository.IncidentCommentRepository;
 import com.net2rent.net2rent_backend.repository.IncidentHistoryRepository;
+import com.net2rent.net2rent_backend.repository.UserRepository;
 import com.net2rent.net2rent_backend.security.AuthUser;
 
 import java.time.LocalDateTime;
@@ -27,6 +28,7 @@ class IncidentTimelineServiceTest {
     @Mock private IncidentService incidentService;
     @Mock private IncidentHistoryRepository incidentHistoryRepository;
     @Mock private IncidentCommentRepository incidentCommentRepository;
+    @Mock private UserRepository userRepository;
     @InjectMocks private IncidentTimelineService service;
 
     private final AuthUser coordinator =
@@ -111,5 +113,24 @@ class IncidentTimelineServiceTest {
                 () -> service.getTimeline(incidentId, coordinator));
 
         verifyNoInteractions(incidentHistoryRepository, incidentCommentRepository);
+    }
+
+    @Test
+    void getTimeline_resolvesOperatorIdToName_forAssignedEvent() {
+        AppUser operator = AppUser.builder().id(20L).firstName("Marta").lastName("Ruiz").build();
+        IncidentHistory assigned = IncidentHistory.builder()
+                .actor(actor).eventType("ASSIGNED").previousValue(null).newValue("20")
+                .createdAt(LocalDateTime.of(2026, 9, 4, 11, 0)).build();
+
+        when(incidentHistoryRepository.findByIncident_IdOrderByCreatedAtAsc(incidentId))
+                .thenReturn(List.of(assigned));
+        when(incidentCommentRepository.findByIncident_IdOrderByCreatedAtAsc(incidentId))
+                .thenReturn(List.of());
+        when(userRepository.findAllById(any())).thenReturn(List.of(operator));
+
+        List<TimelineItemResponse> timeline = service.getTimeline(incidentId, coordinator);
+
+        assertEquals("ASSIGNED", timeline.get(0).eventType());
+        assertEquals("Marta Ruiz", timeline.get(0).newValue());  // ya no "20"
     }
 }

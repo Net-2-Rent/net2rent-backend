@@ -5,6 +5,7 @@ import com.net2rent.net2rent_backend.model.IncidentComment;
 import com.net2rent.net2rent_backend.model.IncidentHistory;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 public record TimelineItemResponse(
         String type,
@@ -16,14 +17,35 @@ public record TimelineItemResponse(
         String text
 ) {
     public static TimelineItemResponse fromEvent(IncidentHistory h) {
+        return fromEvent(h, Map.of());
+    }
+
+    public static TimelineItemResponse fromEvent(IncidentHistory h, Map<Long, String> operatorNames) {
+        String eventType = h.getEventType();
+        String prev = h.getPreviousValue();
+        String next = h.getNewValue();
+        if (referencesOperator(eventType)) {
+            prev = displayName(prev, operatorNames);
+            next = displayName(next, operatorNames);
+        }
         return new TimelineItemResponse(
-                "EVENT",
-                h.getCreatedAt(),
-                actorName(h.getActor()),
-                h.getEventType(),
-                h.getPreviousValue(),
-                h.getNewValue(),
-                null);
+                "EVENT", h.getCreatedAt(), actorName(h.getActor()),
+                eventType, prev, next, null);
+    }
+
+    public static boolean referencesOperator(String eventType) {
+        return "ASSIGNED".equals(eventType)
+                || "REASSIGNED".equals(eventType)
+                || "UNASSIGNED".equals(eventType);
+    }
+
+    private static String displayName(String value, Map<Long, String> operatorNames) {
+        if (value == null) return null;
+        try {
+            return operatorNames.getOrDefault(Long.valueOf(value.trim()), value);
+        } catch (NumberFormatException e) {
+            return value;
+        }
     }
 
     public static TimelineItemResponse fromComment(IncidentComment c) {
