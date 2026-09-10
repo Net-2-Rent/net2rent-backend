@@ -25,6 +25,6 @@ class IncidentHistoryServiceMandatoryTxTest {
 
         assertThrows(IllegalTransactionStateException.class, () ->
                 incidentHistoryService.record(incident, null, IncidentEventType.CREATED,
-                        null, "NEW", LocalDateTime.now()));
+                        null, "NEW", null, LocalDateTime.now()));
     }
 }

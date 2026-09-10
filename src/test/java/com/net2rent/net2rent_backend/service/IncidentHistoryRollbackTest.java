@@ -48,7 +48,7 @@ class IncidentHistoryRollbackTest {
                 tx.executeWithoutResult(status -> {
                     incidentHistoryService.record(incident, null,
                             IncidentEventType.STATUS_CHANGED, "NEW", "ASSIGNED",
-                            LocalDateTime.now());
+                            null, LocalDateTime.now());
                     throw new RuntimeException("fallo simulado tras registrar el evento");
                 }));
 

@@ -186,10 +186,10 @@ public class IncidentService {
 
         AppUser actorEntity = userRepository.getReferenceById(user.userId());
         incidentHistoryService.record(saved, actorEntity, IncidentEventType.CREATED,
-                null, status.name(), now);
+                null, status.name(), null, now);
         if (assignee != null) {
             incidentHistoryService.record(saved, actorEntity, IncidentEventType.ASSIGNED,
-                    null, assignee.getId().toString(), now);
+                    null, assignee.getId().toString(), null, now);
         }
 
         return IncidentResponse.from(saved);
@@ -208,14 +208,14 @@ public class IncidentService {
         if (oldCategory != request.category()) {
             incident.setCategory(request.category());
             incidentHistoryService.record(incident, actorEntity, IncidentEventType.CATEGORY_CHANGED,
-                    nameOrNull(oldCategory), request.category().name(), now);
+                    nameOrNull(oldCategory), request.category().name(), null, now);
         }
 
         IncidentPriority oldPriority = incident.getPriority();
         if (oldPriority != request.priority()) {
             incident.setPriority(request.priority());
             incidentHistoryService.record(incident, actorEntity, IncidentEventType.PRIORITY_CHANGED,
-                    nameOrNull(oldPriority), request.priority().name(), now);
+                    nameOrNull(oldPriority), request.priority().name(), null, now);
         }
 
         incidentRepository.save(incident);
@@ -234,7 +234,7 @@ public class IncidentService {
             incident.setPriority(IncidentPriority.URGENT);
             AppUser actorEntity = userRepository.getReferenceById(user.userId());
             incidentHistoryService.record(incident, actorEntity, IncidentEventType.PRIORITY_CHANGED,
-                    nameOrNull(oldPriority), IncidentPriority.URGENT.name(), LocalDateTime.now(clock));
+                    nameOrNull(oldPriority), IncidentPriority.URGENT.name(), null, LocalDateTime.now(clock));
             incidentRepository.save(incident);
         }
         return IncidentResponse.from(incident);
@@ -253,7 +253,7 @@ public class IncidentService {
         if (!request.description().equals(oldDescription)) {
             incident.setDescription(request.description());
             incidentHistoryService.record(incident, actorEntity, IncidentEventType.DESCRIPTION_CHANGED,
-                    oldDescription, request.description(), now);
+                    oldDescription, request.description(), null, now);
         }
 
         String newTitle = resolveTitle(request.title(), request.description());
@@ -261,7 +261,7 @@ public class IncidentService {
         if (!newTitle.equals(oldTitle)) {
             incident.setTitle(newTitle);
             incidentHistoryService.record(incident, actorEntity, IncidentEventType.TITLE_CHANGED,
-                    oldTitle, newTitle, now);
+                    oldTitle, newTitle, null, now);
         }
 
         incidentRepository.save(incident);
@@ -287,7 +287,7 @@ public class IncidentService {
         incident.setRejectionReason(request.reason().strip());
 
         incidentHistoryService.record(incident, actor, IncidentEventType.STATUS_CHANGED,
-                current.name(), IncidentStatus.REJECTED.name(), now);
+                current.name(), IncidentStatus.REJECTED.name(), null, now);
 
         incidentRepository.save(incident);
         return IncidentResponse.from(incident);
@@ -315,7 +315,7 @@ public class IncidentService {
             incident.setAssignedAt(now);
             incident.setStatus(IncidentStatus.ASSIGNED);
             incidentHistoryService.record(incident, actor, IncidentEventType.ASSIGNED, null,
-                    newOperator.getId().toString(), now);
+                    newOperator.getId().toString(), null, now);
         } else {
             if (current.getId().equals(newOperator.getId())) {
                 throw new ConflictException("El operario ya está asignado a esta incidencia");
@@ -333,7 +333,7 @@ public class IncidentService {
             if (status == IncidentStatus.IN_PROGRESS || status == IncidentStatus.PAUSED) {
                 incident.setStatus(IncidentStatus.ASSIGNED);
                 incidentHistoryService.record(incident, actor, IncidentEventType.STATUS_CHANGED, status.name(),
-                        IncidentStatus.ASSIGNED.name(), now);
+                        IncidentStatus.ASSIGNED.name(), null, now);
             }
         }
 
@@ -362,7 +362,7 @@ public class IncidentService {
         incident.setClosedAt(now); // sella closedAt (el campo ya existe en la entidad)
 
         incidentHistoryService.record(incident, actor, IncidentEventType.STATUS_CHANGED,
-                current.name(), IncidentStatus.CLOSED.name(), now);
+                current.name(), IncidentStatus.CLOSED.name(), null, now);
 
         incidentRepository.save(incident);
         return IncidentResponse.from(incident);
@@ -390,7 +390,7 @@ public class IncidentService {
         incident.setAssignedAt(now);
 
         incidentHistoryService.record(incident, operator, IncidentEventType.ASSIGNED,
-                null, operator.getId().toString(), now);
+                null, operator.getId().toString(), null, now);
 
         incidentRepository.save(incident);
         return IncidentResponse.from(incident);
@@ -430,7 +430,7 @@ public class IncidentService {
         Incident saved = incidentRepository.save(incident);
 
         incidentHistoryService.record(saved, null, IncidentEventType.CREATED,
-                null, IncidentStatus.NEW.name(), now);
+                null, IncidentStatus.NEW.name(), null, now);
 
         return GuestIncidentResponse.from(saved);
     }

@@ -98,7 +98,7 @@ class IncidentServiceAssignTest {
         assertEquals(op, inc.getAssignee());
         // Evento ASSIGNED con el id del operario como nuevo valor
         verify(incidentHistoryService).record(eq(inc), any(), eq(IncidentEventType.ASSIGNED),
-                isNull(), eq("3"), any(LocalDateTime.class));
+                isNull(), eq("3"), isNull(), any(LocalDateTime.class));
         verify(incidentRepository).save(inc);
     }
 
@@ -122,7 +122,7 @@ class IncidentServiceAssignTest {
                 eq("3"), eq("4"), eq("Reparto"), any(LocalDateTime.class));
         // STATUS_CHANGED del cambio IN_PROGRESS -> ASSIGNED
         verify(incidentHistoryService).record(eq(inc), any(), eq(IncidentEventType.STATUS_CHANGED),
-                eq("IN_PROGRESS"), eq("ASSIGNED"), any(LocalDateTime.class));
+                eq("IN_PROGRESS"), eq("ASSIGNED"), isNull(), any(LocalDateTime.class));
     }
 
     @Test

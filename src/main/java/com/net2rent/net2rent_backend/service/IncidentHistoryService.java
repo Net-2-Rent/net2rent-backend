@@ -15,20 +15,13 @@ import java.time.LocalDateTime;
 public class IncidentHistoryService {
     private final IncidentHistoryRepository incidentHistoryRepository;
 
-    public IncidentHistoryService(IncidentHistoryRepository incidentHistoryRepository){
+    public IncidentHistoryService(IncidentHistoryRepository incidentHistoryRepository) {
         this.incidentHistoryRepository = incidentHistoryRepository;
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
     public void record(Incident incident, AppUser actor, IncidentEventType eventType,
-            String previousValue, String newValue, LocalDateTime occuredAt) {
-        record(incident, actor, eventType, previousValue, newValue, null, occuredAt);
-    }
-
-    @Transactional(propagation = Propagation.MANDATORY)
-    public void record(Incident incident, AppUser actor, IncidentEventType eventType,
             String previousValue, String newValue, String note, LocalDateTime occuredAt) {
-
         IncidentHistory event = IncidentHistory.builder()
                 .incident(incident)
                 .actor(actor)
@@ -41,5 +34,4 @@ public class IncidentHistoryService {
 
         incidentHistoryRepository.save(event);
     }
-
 }

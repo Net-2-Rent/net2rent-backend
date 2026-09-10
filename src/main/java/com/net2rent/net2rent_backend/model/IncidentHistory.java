@@ -30,7 +30,7 @@ public class IncidentHistory {
     private String previousValue;
     private String newValue;
 
-    @Column(length = 1000)
+    @Column(columnDefinition = "TEXT")
     private String note;
 
     @Column(nullable = false, updatable = false)

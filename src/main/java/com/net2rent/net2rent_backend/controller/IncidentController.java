@@ -204,6 +204,14 @@ public class IncidentController {
         return incidentExecutionService.resume(id, user);
     }
 
+    @PatchMapping("/{id}/resolve")
+    @PreAuthorize("hasAuthority('RESOLVE_INCIDENT')")
+    public IncidentResponse resolve(@PathVariable Long id,
+                                    @Valid @RequestBody ResolveIncidentRequest request,
+                                    @AuthenticationPrincipal AuthUser user) {
+        return incidentExecutionService.resolve(id, request, user);
+    }
+
     @GetMapping("/{id}/timeline")
     @PreAuthorize("isAuthenticated()")
     public List<TimelineItemResponse> timeline(@PathVariable Long id,

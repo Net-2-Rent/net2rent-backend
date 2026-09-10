@@ -91,7 +91,7 @@ class IncidentServiceRejectTest {
 
         verify(incidentHistoryService, times(1)).record(
                 any(Incident.class), any(), eq(IncidentEventType.STATUS_CHANGED),
-                eq("NEW"), eq("REJECTED"), any(LocalDateTime.class));
+                eq("NEW"), eq("REJECTED"), isNull(), any(LocalDateTime.class));
         verify(incidentRepository).save(incident);
     }
 
@@ -105,7 +105,7 @@ class IncidentServiceRejectTest {
         assertEquals(IncidentStatus.REJECTED, incident.getStatus());
         verify(incidentHistoryService, times(1)).record(
                 any(Incident.class), any(), eq(IncidentEventType.STATUS_CHANGED),
-                eq("IN_PROGRESS"), eq("REJECTED"), any(LocalDateTime.class));
+                eq("IN_PROGRESS"), eq("REJECTED"), isNull(), any(LocalDateTime.class));
     }
 
     // ---------- Status that are not rejectables ----------
@@ -120,7 +120,7 @@ class IncidentServiceRejectTest {
 
         // No cambia nada ni deja rastro
         assertEquals(IncidentStatus.CLOSED, incident.getStatus());
-        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any());
+        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any(), any());
         verify(incidentRepository, never()).save(any());
     }
 
@@ -132,7 +132,7 @@ class IncidentServiceRejectTest {
         assertThrows(ConflictException.class, () ->
                 service.reject(100L, new RejectIncidentRequest("Duplicada"), coordinator));
 
-        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any());
+        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any(), any());
         verify(incidentRepository, never()).save(any());
     }
 
@@ -145,7 +145,7 @@ class IncidentServiceRejectTest {
                 service.reject(100L, new RejectIncidentRequest("Duplicada"), coordinator));
 
         assertEquals(IncidentStatus.RESOLVED, incident.getStatus());
-        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any());
+        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any(), any());
     }
 
     // ---------- Account aisolation ----------
@@ -157,6 +157,6 @@ class IncidentServiceRejectTest {
         assertThrows(NotFoundException.class, () ->
                 service.reject(999L, new RejectIncidentRequest("Duplicada"), coordinator));
 
-        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any());
+        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any(), any());
     }
 }

@@ -4,6 +4,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.net2rent.net2rent_backend.dto.LoginRequest;
 import com.net2rent.net2rent_backend.dto.request.CreateCommentRequest;
@@ -210,5 +214,86 @@ class IncidentIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"text\":\"\"}"))
                 .andExpect(status().isConflict());
+    }
+
+    // ---------- resolve (CU-EXE-06/09/10/11) ----------
+
+    private Long createAssignedIncidentId(String token) throws Exception {
+        MvcResult ops = mockMvc.perform(get("/api/users/operators")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk()).andReturn();
+        JsonNode operators = objectMapper.readTree(ops.getResponse().getContentAsString());
+        Long operatorId = Long.valueOf(operators.get(0).get("id").asString());
+
+        MvcResult created = mockMvc.perform(post("/api/incidents")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(validRequest(1L, operatorId))))
+                .andExpect(status().isCreated()).andReturn();
+
+        return Long.parseLong(objectMapper.readTree(
+                created.getResponse().getContentAsString()).get("id").asString());
+    }
+
+    @Test
+    void resolve_withValidData_returns200Resolved() throws Exception {
+        String token = loginAndGetToken("admin@net2rent.com", "Test1234");
+        Long incidentId = createAssignedIncidentId(token);
+
+        mockMvc.perform(patch("/api/incidents/" + incidentId + "/start")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(patch("/api/incidents/" + incidentId + "/resolve")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"minutes\": 45, \"note\": \"Cambiada la resistencia del termo\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("RESOLVED"))
+                .andExpect(jsonPath("$.minutesSpent").value(45))
+                .andExpect(jsonPath("$.resolutionNote").value("Cambiada la resistencia del termo"));
+    }
+
+    @Test
+    void resolve_withoutNote_returns409() throws Exception {
+        String token = loginAndGetToken("admin@net2rent.com", "Test1234");
+        Long incidentId = createAssignedIncidentId(token);
+
+        mockMvc.perform(patch("/api/incidents/" + incidentId + "/resolve")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"minutes\": 30}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.errors[0].field").value("note"))
+                .andExpect(jsonPath("$.errors[0].message").value("Debes describir cómo se ha resuelto"));
+    }
+
+    @Test
+    void resolve_withoutMinutes_returns409() throws Exception {
+        String token = loginAndGetToken("admin@net2rent.com", "Test1234");
+        Long incidentId = createAssignedIncidentId(token);
+
+        mockMvc.perform(patch("/api/incidents/" + incidentId + "/resolve")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"note\": \"Arreglado\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.errors[0].field").value("minutes"))
+                .andExpect(jsonPath("$.errors[0].message").value("Debes indicar cuánto tiempo has dedicado"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, -5, 1441})
+    void resolve_withMinutesOutOfRange_returns409(int invalidMinutes) throws Exception {
+        String token = loginAndGetToken("admin@net2rent.com", "Test1234");
+        Long incidentId = createAssignedIncidentId(token);
+
+        mockMvc.perform(patch("/api/incidents/" + incidentId + "/resolve")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"minutes\": " + invalidMinutes + ", \"note\": \"Arreglado\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.errors[0].field").value("minutes"))
+                .andExpect(jsonPath("$.errors[0].message").value("El tiempo debe estar entre 1 y 1440 minutos"));
     }
 }

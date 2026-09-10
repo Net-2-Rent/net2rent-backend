@@ -11,4 +11,6 @@ public interface IncidentCheckListItemRepository extends JpaRepository<IncidentC
     List<IncidentCheckListItem> findByIncident_IdOrderByPositionAscIdAsc(Long incidentId);
 
     Optional<IncidentCheckListItem> findByIdAndIncident_Id(Long id, Long incidentId);
+
+    long countByIncident_IdAndDoneFalse(Long incidentId);
 }
