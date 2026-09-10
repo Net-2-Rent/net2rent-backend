@@ -94,7 +94,7 @@ class IncidentServiceClaimTest {
 
         verify(incidentHistoryService).record(
                 any(Incident.class), eq(operatorEntity), eq(IncidentEventType.ASSIGNED),
-                isNull(), eq("20"), any(LocalDateTime.class));
+                isNull(), eq("20"), isNull(), any(LocalDateTime.class));
         verify(incidentRepository).save(incident);
     }
 
@@ -111,7 +111,7 @@ class IncidentServiceClaimTest {
                 () -> service.claim(100L, operator));
         assertEquals("Esta incidencia ya ha sido asignada", ex.getMessage());
 
-        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any());
+        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any(), any());
         verify(incidentRepository, never()).save(any());
     }
 
@@ -125,7 +125,7 @@ class IncidentServiceClaimTest {
 
         assertThrows(ConflictException.class, () -> service.claim(100L, operator));
 
-        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any());
+        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any(), any());
         verify(incidentRepository, never()).save(any());
     }
 
@@ -136,7 +136,7 @@ class IncidentServiceClaimTest {
 
         assertThrows(NotFoundException.class, () -> service.claim(999L, operator));
 
-        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any());
+        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any(), any());
         verify(incidentRepository, never()).save(any());
     }
 }

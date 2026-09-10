@@ -89,7 +89,7 @@ class IncidentServiceTerminalGuardTest {
                         coordinator));
 
         // No cambia nada ni deja rastro
-        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any());
+        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any(), any());
         verify(incidentRepository, never()).save(any());
     }
 
@@ -103,7 +103,7 @@ class IncidentServiceTerminalGuardTest {
                         new CorrectIncidentTextRequest("Nuevo título", "Nueva descripción"),
                         coordinator));
 
-        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any());
+        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any(), any());
         verify(incidentRepository, never()).save(any());
     }
 
@@ -115,7 +115,7 @@ class IncidentServiceTerminalGuardTest {
         assertThrows(ConflictException.class, () ->
                 service.markUrgent(100L, coordinator));
 
-        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any());
+        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any(), any());
         verify(incidentRepository, never()).save(any());
     }
 }

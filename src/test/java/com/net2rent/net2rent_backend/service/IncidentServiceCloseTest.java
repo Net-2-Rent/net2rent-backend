@@ -90,7 +90,7 @@ class IncidentServiceCloseTest {
 
         verify(incidentHistoryService, times(1)).record(
                 any(Incident.class), any(), eq(IncidentEventType.STATUS_CHANGED),
-                eq("RESOLVED"), eq("CLOSED"), any(LocalDateTime.class));
+                eq("RESOLVED"), eq("CLOSED"), isNull(), any(LocalDateTime.class));
         verify(incidentRepository).save(incident);
     }
 
@@ -106,7 +106,7 @@ class IncidentServiceCloseTest {
         // No cambia nada ni deja rastro
         assertEquals(IncidentStatus.IN_PROGRESS, incident.getStatus());
         assertNull(incident.getClosedAt());
-        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any());
+        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any(), any());
         verify(incidentRepository, never()).save(any());
     }
 
@@ -118,7 +118,7 @@ class IncidentServiceCloseTest {
         assertThrows(ConflictException.class, () -> service.close(100L, coordinator));
 
         assertEquals(IncidentStatus.NEW, incident.getStatus());
-        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any());
+        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any(), any());
         verify(incidentRepository, never()).save(any());
     }
 
@@ -129,7 +129,7 @@ class IncidentServiceCloseTest {
 
         assertThrows(ConflictException.class, () -> service.close(100L, coordinator));
 
-        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any());
+        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any(), any());
         verify(incidentRepository, never()).save(any());
     }
 
@@ -141,7 +141,7 @@ class IncidentServiceCloseTest {
         assertThrows(ConflictException.class, () -> service.close(100L, coordinator));
 
         assertEquals(IncidentStatus.REJECTED, incident.getStatus());
-        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any());
+        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any(), any());
         verify(incidentRepository, never()).save(any());
     }
 
@@ -153,7 +153,7 @@ class IncidentServiceCloseTest {
 
         assertThrows(NotFoundException.class, () -> service.close(999L, coordinator));
 
-        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any());
+        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any(), any());
         verify(incidentRepository, never()).save(any());
     }
 }

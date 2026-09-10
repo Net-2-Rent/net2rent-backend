@@ -102,7 +102,7 @@ class IncidentServiceTriageTest {
         // Se guardan DOS eventos de historial con valor anterior y nuevo
         ArgumentCaptor<IncidentEventType> typeCaptor = ArgumentCaptor.forClass(IncidentEventType.class);
         verify(incidentHistoryService, times(2)).record(
-                any(Incident.class), any(), typeCaptor.capture(), any(), any(), any(LocalDateTime.class));
+                any(Incident.class), any(), typeCaptor.capture(), any(), any(), any(), any(LocalDateTime.class));
         List<IncidentEventType> types = typeCaptor.getAllValues();
         assertEquals(IncidentEventType.CATEGORY_CHANGED, types.get(0));
         assertEquals(IncidentEventType.PRIORITY_CHANGED, types.get(1));
@@ -119,7 +119,7 @@ class IncidentServiceTriageTest {
                 new ClassifyIncidentRequest(IncidentCategory.PLUMBING, IncidentPriority.HIGH),
                 coordinator);
 
-        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any());
+        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any(), any());
     }
 
     // ---------- CU-INC-05: marcar urgente ----------
@@ -144,7 +144,7 @@ class IncidentServiceTriageTest {
 
         ArgumentCaptor<IncidentEventType> typeCaptor = ArgumentCaptor.forClass(IncidentEventType.class);
         verify(incidentHistoryService, times(1)).record(
-                any(Incident.class), any(), typeCaptor.capture(), any(), any(), any(LocalDateTime.class));
+                any(Incident.class), any(), typeCaptor.capture(), any(), any(), any(), any(LocalDateTime.class));
         assertEquals(IncidentEventType.PRIORITY_CHANGED, typeCaptor.getValue());
     }
 
@@ -191,6 +191,6 @@ class IncidentServiceTriageTest {
                         new ClassifyIncidentRequest(IncidentCategory.PLUMBING, IncidentPriority.HIGH),
                         coordinator));
 
-        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any());
+        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any(), any());
     }
 }

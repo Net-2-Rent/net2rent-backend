@@ -79,7 +79,7 @@ class IncidentExecutionServiceTest {
         verify(incidentAccessPolicy).ensureCanActOn(incident, coordinator);
         verify(incidentHistoryService).record(
                 same(incident), same(actor), eq(IncidentEventType.STATUS_CHANGED),
-                eq("ASSIGNED"), eq("IN_PROGRESS"), any(LocalDateTime.class));
+                eq("ASSIGNED"), eq("IN_PROGRESS"), isNull(), any(LocalDateTime.class));
         verify(incidentRepository).save(incident);
     }
 
@@ -92,7 +92,7 @@ class IncidentExecutionServiceTest {
         assertThrows(ConflictException.class, () -> service.start(5L, coordinator));
 
         assertEquals(otherStatus, incident.getStatus());
-        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any());
+        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any(), any());
         verify(incidentRepository, never()).save(any());
     }
 
@@ -105,7 +105,7 @@ class IncidentExecutionServiceTest {
 
         assertThrows(ForbiddenException.class, () -> service.start(5L, operator));
 
-        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any());
+        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any(), any());
         verify(incidentRepository, never()).save(any());
     }
 
@@ -138,7 +138,7 @@ class IncidentExecutionServiceTest {
 
         verify(incidentHistoryService).record(
                 same(incident), same(actor), eq(IncidentEventType.STATUS_CHANGED),
-                eq("IN_PROGRESS"), eq("PAUSED"), any(LocalDateTime.class));
+                eq("IN_PROGRESS"), eq("PAUSED"), eq("Falta material"), any(LocalDateTime.class));
         verify(incidentRepository).save(incident);
     }
 
@@ -151,7 +151,7 @@ class IncidentExecutionServiceTest {
         assertThrows(ConflictException.class,
                 () -> service.pause(5L, new PauseIncidentRequest("Falta material"), coordinator));
 
-        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any());
+        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any(), any());
         verify(incidentRepository, never()).save(any());
     }
 
@@ -165,7 +165,7 @@ class IncidentExecutionServiceTest {
         assertThrows(ForbiddenException.class,
                 () -> service.pause(5L, new PauseIncidentRequest("Falta material"), operator));
 
-        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any());
+        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any(), any());
         verify(incidentRepository, never()).save(any());
     }
 
@@ -196,7 +196,7 @@ class IncidentExecutionServiceTest {
 
         verify(incidentHistoryService).record(
                 same(incident), same(actor), eq(IncidentEventType.STATUS_CHANGED),
-                eq("PAUSED"), eq("IN_PROGRESS"), any(LocalDateTime.class));
+                eq("PAUSED"), eq("IN_PROGRESS"), isNull(), any(LocalDateTime.class));
         verify(incidentRepository).save(incident);
     }
 
@@ -208,7 +208,7 @@ class IncidentExecutionServiceTest {
 
         assertThrows(ConflictException.class, () -> service.resume(5L, coordinator));
 
-        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any());
+        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any(), any());
         verify(incidentRepository, never()).save(any());
     }
 
@@ -221,7 +221,7 @@ class IncidentExecutionServiceTest {
 
         assertThrows(ForbiddenException.class, () -> service.resume(5L, operator));
 
-        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any());
+        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any(), any());
         verify(incidentRepository, never()).save(any());
     }
 
@@ -257,10 +257,10 @@ class IncidentExecutionServiceTest {
         verify(incidentAccessPolicy).ensureCanActOn(incident, coordinator);
         verify(incidentHistoryService).record(
                 same(incident), same(actor), eq(IncidentEventType.STATUS_CHANGED),
-                eq("IN_PROGRESS"), eq("RESOLVED"), any(LocalDateTime.class));
+                eq("IN_PROGRESS"), eq("RESOLVED"), eq("Cambiada la resistencia del termo"), any(LocalDateTime.class));
         verify(incidentHistoryService).record(
                 same(incident), same(actor), eq(IncidentEventType.TIME_LOGGED),
-                isNull(), eq("45"), any(LocalDateTime.class));
+                isNull(), eq("45"), isNull(), any(LocalDateTime.class));
         verify(incidentRepository).save(incident);
     }
 
@@ -280,7 +280,7 @@ class IncidentExecutionServiceTest {
         assertEquals("RESOLVED", response.status());
         verify(incidentHistoryService).record(
                 same(incident), same(actor), eq(IncidentEventType.STATUS_CHANGED),
-                eq("PAUSED"), eq("RESOLVED"), any(LocalDateTime.class));
+                eq("PAUSED"), eq("RESOLVED"), eq("Revisado el cuadro eléctrico"), any(LocalDateTime.class));
         verify(incidentRepository).save(incident);
     }
 
@@ -294,7 +294,7 @@ class IncidentExecutionServiceTest {
         assertThrows(ConflictException.class, () -> service.resolve(5L, request, coordinator));
 
         assertEquals(otherStatus, incident.getStatus());
-        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any());
+        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any(), any());
         verify(incidentRepository, never()).save(any());
     }
 
@@ -308,7 +308,7 @@ class IncidentExecutionServiceTest {
         ResolveIncidentRequest request = new ResolveIncidentRequest(30, "Nota");
         assertThrows(ForbiddenException.class, () -> service.resolve(5L, request, operator));
 
-        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any());
+        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any(), any());
         verify(incidentRepository, never()).save(any());
     }
 
@@ -333,7 +333,7 @@ class IncidentExecutionServiceTest {
                 () -> service.resolve(5L, request, coordinator));
 
         assertEquals("La incidencia necesita una categoría", ex.getMessage());
-        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any());
+        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any(), any());
         verify(incidentRepository, never()).save(any());
     }
 
@@ -349,7 +349,7 @@ class IncidentExecutionServiceTest {
                 () -> service.resolve(5L, request, coordinator));
 
         assertEquals("Quedan 3 tareas del checklist sin completar", ex.getMessage());
-        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any());
+        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any(), any());
         verify(incidentRepository, never()).save(any());
     }
 }
