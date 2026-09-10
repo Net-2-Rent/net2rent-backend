@@ -234,7 +234,8 @@ CREATE TABLE public.incident_history (
     incident_id bigint NOT NULL,
     event_type character varying(255) NOT NULL,
     new_value character varying(255),
-    previous_value character varying(255)
+    previous_value character varying(255),
+    note character varying(1000)
 );
 
 

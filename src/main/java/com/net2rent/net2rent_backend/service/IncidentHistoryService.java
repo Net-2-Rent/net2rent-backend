@@ -21,7 +21,13 @@ public class IncidentHistoryService {
 
     @Transactional(propagation = Propagation.MANDATORY)
     public void record(Incident incident, AppUser actor, IncidentEventType eventType,
-                       String previousValue, String newValue, LocalDateTime occuredAt) {
+            String previousValue, String newValue, LocalDateTime occuredAt) {
+        record(incident, actor, eventType, previousValue, newValue, null, occuredAt);
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void record(Incident incident, AppUser actor, IncidentEventType eventType,
+            String previousValue, String newValue, String note, LocalDateTime occuredAt) {
 
         IncidentHistory event = IncidentHistory.builder()
                 .incident(incident)
@@ -29,9 +35,11 @@ public class IncidentHistoryService {
                 .eventType(eventType.name())
                 .previousValue(previousValue)
                 .newValue(newValue)
+                .note(note)
                 .createdAt(occuredAt)
                 .build();
 
         incidentHistoryRepository.save(event);
     }
+
 }

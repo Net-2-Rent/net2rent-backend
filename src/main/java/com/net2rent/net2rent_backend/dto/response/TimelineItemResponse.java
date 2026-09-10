@@ -30,7 +30,7 @@ public record TimelineItemResponse(
         }
         return new TimelineItemResponse(
                 "EVENT", h.getCreatedAt(), actorName(h.getActor()),
-                eventType, prev, next, null);
+                eventType, prev, next, h.getNote());
     }
 
     public static boolean referencesOperator(String eventType) {

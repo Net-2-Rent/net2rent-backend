@@ -265,4 +265,12 @@ public class IncidentController {
             @AuthenticationPrincipal AuthUser user) {
         return incidentChecklistService.reorder(id, request, user);
     }
+
+    @PatchMapping("/{id}/assignee")
+    @PreAuthorize("hasAuthority('ASSIGN_OPERATOR')")
+    public IncidentResponse assignOperator(@PathVariable Long id,
+            @Valid @RequestBody AssignOperatorRequest request,
+            @AuthenticationPrincipal AuthUser user) {
+        return incidentService.assignOperator(id, request, user);
+    }
 }
