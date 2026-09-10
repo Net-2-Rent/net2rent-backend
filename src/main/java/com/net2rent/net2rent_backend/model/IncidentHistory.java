@@ -30,6 +30,9 @@ public class IncidentHistory {
     private String previousValue;
     private String newValue;
 
+    @Column(columnDefinition = "TEXT")
+    private String note;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

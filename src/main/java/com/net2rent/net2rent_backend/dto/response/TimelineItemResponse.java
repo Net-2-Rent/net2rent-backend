@@ -14,6 +14,7 @@ public record TimelineItemResponse(
         String eventType,
         String previousValue,
         String newValue,
+        String note,
         String text
 ) {
     public static TimelineItemResponse fromEvent(IncidentHistory h) {
@@ -30,7 +31,7 @@ public record TimelineItemResponse(
         }
         return new TimelineItemResponse(
                 "EVENT", h.getCreatedAt(), actorName(h.getActor()),
-                eventType, prev, next, null);
+                eventType, prev, next, h.getNote(), null);
     }
 
     public static boolean referencesOperator(String eventType) {
@@ -53,7 +54,7 @@ public record TimelineItemResponse(
                 "COMMENT",
                 c.getCreatedAt(),
                 actorName(c.getAuthor()),
-                null, null, null,
+                null, null, null, null,
                 c.getText());
     }
 

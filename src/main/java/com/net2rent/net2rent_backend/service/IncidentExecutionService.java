@@ -64,7 +64,7 @@ public class IncidentExecutionService {
         incident.setStartedAt(now);
 
         incidentHistoryService.record(incident, actor, IncidentEventType.STATUS_CHANGED,
-                current.name(), IncidentStatus.IN_PROGRESS.name(), now);
+                current.name(), IncidentStatus.IN_PROGRESS.name(), null, now);
 
         incidentRepository.save(incident);
         return IncidentResponse.from(incident);
@@ -89,7 +89,7 @@ public class IncidentExecutionService {
         incident.setPauseReason(request.reason().strip());
 
         incidentHistoryService.record(incident, actor, IncidentEventType.STATUS_CHANGED,
-                current.name(), IncidentStatus.PAUSED.name(), now);
+                current.name(), IncidentStatus.PAUSED.name(), request.reason().strip(), now);
 
         incidentRepository.save(incident);
         return IncidentResponse.from(incident);
@@ -113,7 +113,7 @@ public class IncidentExecutionService {
         incident.setStatus(IncidentStatus.IN_PROGRESS);
 
         incidentHistoryService.record(incident, actor, IncidentEventType.STATUS_CHANGED,
-                current.name(), IncidentStatus.IN_PROGRESS.name(), now);
+                current.name(), IncidentStatus.IN_PROGRESS.name(), null, now);
 
         incidentRepository.save(incident);
         return IncidentResponse.from(incident);
@@ -149,9 +149,10 @@ public class IncidentExecutionService {
         incident.setResolutionNote(request.note().strip());
 
         incidentHistoryService.record(incident, actor, IncidentEventType.STATUS_CHANGED,
-                current.name(), IncidentStatus.RESOLVED.name(), now);
+                current.name(), IncidentStatus.RESOLVED.name(), request.note().strip(), now);
+
         incidentHistoryService.record(incident, actor, IncidentEventType.TIME_LOGGED,
-                null, String.valueOf(request.minutes()), now);
+                null, String.valueOf(request.minutes()), null, now);
 
         incidentRepository.save(incident);
         return IncidentResponse.from(incident);
