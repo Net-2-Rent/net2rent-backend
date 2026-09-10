@@ -100,7 +100,7 @@ class IncidentServiceTest {
         assertEquals(LocalDateTime.of(2026, 9, 1, 9, 0), saved.getOpenedAt());
         assertEquals("No hay luz en el salón desde ayer", saved.getTitle());
 
-        verify(incidentHistoryService, times(1)).record(any(), any(), any(), any(), any(), any());
+        verify(incidentHistoryService, times(1)).record(any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -126,7 +126,7 @@ class IncidentServiceTest {
         assertNotNull(saved.getAssignee());
         assertEquals(LocalDateTime.of(2026, 9, 2, 8, 0), saved.getAssignedAt());
 
-        verify(incidentHistoryService, times(2)).record(any(), any(), any(), any(), any(), any());
+        verify(incidentHistoryService, times(2)).record(any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -192,7 +192,7 @@ class IncidentServiceTest {
         ArgumentCaptor<IncidentHistory> historyCaptor = ArgumentCaptor.forClass(IncidentHistory.class);
         verify(incidentHistoryService, times(1)).record(
                 any(Incident.class), isNull(), eq(IncidentEventType.CREATED),
-                isNull(), eq(IncidentStatus.NEW.name()), any(LocalDateTime.class));
+                isNull(), eq(IncidentStatus.NEW.name()), isNull(), any(LocalDateTime.class));
     }
 
     @Test

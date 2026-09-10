@@ -31,7 +31,7 @@ class IncidentHistoryServiceTest {
         LocalDateTime occurredAt = LocalDateTime.of(2026, 9, 4, 8, 0);
 
         service.record(incident, actor, IncidentEventType.PRIORITY_CHANGED,
-                "NORMAL", "URGENT", occurredAt);
+                "NORMAL", "URGENT", null, occurredAt);
 
         ArgumentCaptor<IncidentHistory> captor = ArgumentCaptor.forClass(IncidentHistory.class);
         verify(incidentHistoryRepository).save(captor.capture());
@@ -50,7 +50,7 @@ class IncidentHistoryServiceTest {
         Incident incident = Incident.builder().id(5L).build();
         LocalDateTime occurredAt = LocalDateTime.of(2026, 9, 4, 8, 0);
 
-        service.record(incident, null, IncidentEventType.CREATED, null, "NEW", occurredAt);
+        service.record(incident, null, IncidentEventType.CREATED, null, "NEW", null, occurredAt);
 
         ArgumentCaptor<IncidentHistory> captor = ArgumentCaptor.forClass(IncidentHistory.class);
         verify(incidentHistoryRepository).save(captor.capture());
