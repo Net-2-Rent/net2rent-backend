@@ -6,6 +6,7 @@ import static org.mockito.Mockito.*;
 
 import com.net2rent.net2rent_backend.dto.IncidentResponse;
 import com.net2rent.net2rent_backend.dto.PauseIncidentRequest;
+import com.net2rent.net2rent_backend.dto.ResolveIncidentRequest;
 import com.net2rent.net2rent_backend.exception.ConflictException;
 import com.net2rent.net2rent_backend.exception.ForbiddenException;
 import com.net2rent.net2rent_backend.exception.NotFoundException;
@@ -13,6 +14,7 @@ import com.net2rent.net2rent_backend.model.AppUser;
 import com.net2rent.net2rent_backend.model.Incident;
 import com.net2rent.net2rent_backend.model.enums.IncidentEventType;
 import com.net2rent.net2rent_backend.model.enums.IncidentStatus;
+import com.net2rent.net2rent_backend.model.enums.IncidentCategory;
 import com.net2rent.net2rent_backend.repository.IncidentRepository;
 import com.net2rent.net2rent_backend.repository.UserRepository;
 import com.net2rent.net2rent_backend.security.AuthUser;
@@ -38,6 +40,7 @@ class IncidentExecutionServiceTest {
     @Mock private IncidentAccessPolicy incidentAccessPolicy;
     @Mock private IncidentRepository incidentRepository;
     @Mock private IncidentHistoryService incidentHistoryService;
+    @Mock private IncidentChecklistService incidentChecklistService;
     @Mock private UserRepository userRepository;
 
     private final Clock clock =
@@ -51,9 +54,8 @@ class IncidentExecutionServiceTest {
     @BeforeEach
     void setUp() {
         service = new IncidentExecutionService(incidentService, incidentAccessPolicy,
-                incidentRepository, incidentHistoryService, userRepository, clock);
+                incidentRepository, incidentHistoryService, userRepository, clock, incidentChecklistService);
     }
-
     private Incident incidentWithStatus(IncidentStatus status) {
         return Incident.builder().id(5L).status(status).build();
     }
@@ -230,5 +232,124 @@ class IncidentExecutionServiceTest {
 
         assertThrows(NotFoundException.class, () -> service.resume(99L, coordinator));
         verifyNoInteractions(incidentAccessPolicy, incidentRepository, incidentHistoryService);
+    }
+
+    // ---------- resolve (CU-EXE-06) ----------
+
+    @Test
+    void resolve_fromInProgress_setsResolvedAndSealsData_recordsHistory() {
+        Incident incident = incidentWithStatus(IncidentStatus.IN_PROGRESS);
+        incident.setCategory(IncidentCategory.PLUMBING);
+        AppUser actor = AppUser.builder().id(10L).build();
+
+        when(incidentService.getOwnedByAccountOr404(5L, coordinator)).thenReturn(incident);
+        when(userRepository.getReferenceById(10L)).thenReturn(actor);
+
+        IncidentResponse response = service.resolve(5L,
+                new ResolveIncidentRequest(45, "  Cambiada la resistencia del termo  "), coordinator);
+
+        assertEquals(IncidentStatus.RESOLVED, incident.getStatus());
+        assertEquals(LocalDateTime.of(2026, 9, 8, 8, 0), incident.getResolvedAt());
+        assertEquals(45, incident.getMinutesSpent());
+        assertEquals("Cambiada la resistencia del termo", incident.getResolutionNote());
+        assertEquals("RESOLVED", response.status());
+
+        verify(incidentAccessPolicy).ensureCanActOn(incident, coordinator);
+        verify(incidentHistoryService).record(
+                same(incident), same(actor), eq(IncidentEventType.STATUS_CHANGED),
+                eq("IN_PROGRESS"), eq("RESOLVED"), any(LocalDateTime.class));
+        verify(incidentHistoryService).record(
+                same(incident), same(actor), eq(IncidentEventType.TIME_LOGGED),
+                isNull(), eq("45"), any(LocalDateTime.class));
+        verify(incidentRepository).save(incident);
+    }
+
+    @Test
+    void resolve_fromPaused_setsResolvedAndSealsData_recordsHistory() {
+        Incident incident = incidentWithStatus(IncidentStatus.PAUSED);
+        incident.setCategory(IncidentCategory.ELECTRICITY);
+        AppUser actor = AppUser.builder().id(10L).build();
+
+        when(incidentService.getOwnedByAccountOr404(5L, coordinator)).thenReturn(incident);
+        when(userRepository.getReferenceById(10L)).thenReturn(actor);
+
+        IncidentResponse response = service.resolve(5L,
+                new ResolveIncidentRequest(20, "Revisado el cuadro eléctrico"), coordinator);
+
+        assertEquals(IncidentStatus.RESOLVED, incident.getStatus());
+        assertEquals("RESOLVED", response.status());
+        verify(incidentHistoryService).record(
+                same(incident), same(actor), eq(IncidentEventType.STATUS_CHANGED),
+                eq("PAUSED"), eq("RESOLVED"), any(LocalDateTime.class));
+        verify(incidentRepository).save(incident);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = IncidentStatus.class, names = {"IN_PROGRESS", "PAUSED"}, mode = EnumSource.Mode.EXCLUDE)
+    void resolve_whenNotInProgressOrPaused_throwsConflict_andDoesNotSave(IncidentStatus otherStatus) {
+        Incident incident = incidentWithStatus(otherStatus);
+        when(incidentService.getOwnedByAccountOr404(5L, coordinator)).thenReturn(incident);
+
+        ResolveIncidentRequest request = new ResolveIncidentRequest(30, "Nota");
+        assertThrows(ConflictException.class, () -> service.resolve(5L, request, coordinator));
+
+        assertEquals(otherStatus, incident.getStatus());
+        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any());
+        verify(incidentRepository, never()).save(any());
+    }
+
+    @Test
+    void resolve_whenPolicyForbids_throws403_andDoesNotSave() {
+        Incident incident = incidentWithStatus(IncidentStatus.IN_PROGRESS);
+        when(incidentService.getOwnedByAccountOr404(5L, operator)).thenReturn(incident);
+        doThrow(new ForbiddenException("No puedes editar una incidencia que no tienes asignada"))
+                .when(incidentAccessPolicy).ensureCanActOn(incident, operator);
+
+        ResolveIncidentRequest request = new ResolveIncidentRequest(30, "Nota");
+        assertThrows(ForbiddenException.class, () -> service.resolve(5L, request, operator));
+
+        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any());
+        verify(incidentRepository, never()).save(any());
+    }
+
+    @Test
+    void resolve_whenIncidentNotAccessible_propagates404() {
+        when(incidentService.getOwnedByAccountOr404(99L, coordinator))
+                .thenThrow(new NotFoundException("Incidencia no encontrada"));
+
+        ResolveIncidentRequest request = new ResolveIncidentRequest(30, "Nota");
+        assertThrows(NotFoundException.class, () -> service.resolve(99L, request, coordinator));
+        verifyNoInteractions(incidentAccessPolicy, incidentRepository, incidentHistoryService, incidentChecklistService);
+    }
+
+    @Test
+    void resolve_whenCategoryNull_throwsConflict_andDoesNotSave() {
+        Incident incident = incidentWithStatus(IncidentStatus.IN_PROGRESS); // sin categoría
+
+        when(incidentService.getOwnedByAccountOr404(5L, coordinator)).thenReturn(incident);
+
+        ResolveIncidentRequest request = new ResolveIncidentRequest(30, "Nota");
+        ConflictException ex = assertThrows(ConflictException.class,
+                () -> service.resolve(5L, request, coordinator));
+
+        assertEquals("La incidencia necesita una categoría", ex.getMessage());
+        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any());
+        verify(incidentRepository, never()).save(any());
+    }
+
+    @Test
+    void resolve_whenChecklistHasPendingItems_throwsConflict_withCountInMessage_andDoesNotSave() {
+        Incident incident = incidentWithStatus(IncidentStatus.IN_PROGRESS);
+        incident.setCategory(IncidentCategory.PLUMBING);
+        when(incidentService.getOwnedByAccountOr404(5L, coordinator)).thenReturn(incident);
+        when(incidentChecklistService.countPending(5L)).thenReturn(3L);
+
+        ResolveIncidentRequest request = new ResolveIncidentRequest(30, "Nota");
+        ConflictException ex = assertThrows(ConflictException.class,
+                () -> service.resolve(5L, request, coordinator));
+
+        assertEquals("Quedan 3 tareas del checklist sin completar", ex.getMessage());
+        verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any());
+        verify(incidentRepository, never()).save(any());
     }
 }

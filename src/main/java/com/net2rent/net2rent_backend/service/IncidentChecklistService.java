@@ -43,6 +43,11 @@ public class IncidentChecklistService {
     }
 
     @Transactional(readOnly = true)
+    public long countPending(Long incidentId) {
+        return checklistItemRepository.countByIncident_IdAndDoneFalse(incidentId);
+    }
+
+    @Transactional(readOnly = true)
     public List<ChecklistItemResponse> list(Long incidentId, AuthUser user) {
         Incident incident = incidentService.getOwnedByAccountOr404(incidentId, user);
         return checklistItemRepository.findByIncident_IdOrderByPositionAscIdAsc(incident.getId())
