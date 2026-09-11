@@ -1,5 +1,6 @@
 package com.net2rent.net2rent_backend.service;
 
+import com.net2rent.net2rent_backend.dto.AssignOperatorRequest;
 import com.net2rent.net2rent_backend.dto.ClassifyIncidentRequest;
 import com.net2rent.net2rent_backend.dto.CorrectIncidentTextRequest;
 import com.net2rent.net2rent_backend.dto.IncidentResponse;
@@ -53,11 +54,11 @@ public class IncidentService {
     private final Clock clock;
 
     public IncidentService(IncidentRepository incidentRepository,
-                           IncidentCounterRepository incidentCounterRepository,
-                           IncidentHistoryService incidentHistoryService,
-                           LodgingRepository lodgingRepository,
-                           UserRepository userRepository, IncidentImageService incidentImageService,
-                           Clock clock) {
+            IncidentCounterRepository incidentCounterRepository,
+            IncidentHistoryService incidentHistoryService,
+            LodgingRepository lodgingRepository,
+            UserRepository userRepository, IncidentImageService incidentImageService,
+            Clock clock) {
         this.incidentRepository = incidentRepository;
         this.incidentCounterRepository = incidentCounterRepository;
         this.incidentHistoryService = incidentHistoryService;
@@ -71,17 +72,17 @@ public class IncidentService {
 
     @Transactional(readOnly = true)
     public IncidentListResponse list(IncidentFilter filter,
-                                     SortField sortField,
-                                     Sort.Direction direction,
-                                     Pageable pageable,
-                                     AuthUser user,
-                                     OperatorScope scope) {
+            SortField sortField,
+            Sort.Direction direction,
+            Pageable pageable,
+            AuthUser user,
+            OperatorScope scope) {
         Long operatorUserId = UserRole.OPERATOR.name().equals(user.role())
                 ? user.userId()
                 : null;
 
-        Specification<Incident> filterSpec =
-                IncidentSpecifications.forListing(user.accountId(), filter, operatorUserId, scope);
+        Specification<Incident> filterSpec = IncidentSpecifications.forListing(user.accountId(), filter, operatorUserId,
+                scope);
 
         Page<Incident> page = incidentRepository.findAll(
                 filterSpec.and(IncidentSpecifications.orderBy(sortField, direction)),
@@ -96,7 +97,8 @@ public class IncidentService {
                 countByStatus(filterSpec));
     }
 
-    // Header counters (CU-LST-05): the 5 OPEN states, over the same filters as the page.
+    // Header counters (CU-LST-05): the 5 OPEN states, over the same filters as the
+    // page.
     private Map<IncidentStatus, Long> countByStatus(Specification<Incident> filterSpec) {
         List<IncidentStatus> headerStatuses = List.of(
                 IncidentStatus.NEW,
@@ -150,10 +152,7 @@ public class IncidentService {
 
         AppUser assignee = null;
         if (req.assigneeId() != null) {
-            assignee = userRepository
-                    .findByIdAndAccount_Id(req.assigneeId(), user.accountId())
-                    .filter(u -> u.isActive() && u.getRole() == UserRole.OPERATOR)
-                    .orElseThrow(() -> new ConflictException("Operario no válido"));
+            assignee = validateOperator(req.assigneeId(), user.accountId());
         }
 
         IncidentStatus status = (assignee == null)
@@ -294,15 +293,64 @@ public class IncidentService {
         return IncidentResponse.from(incident);
     }
 
+    // ---------- CU-INC-06 / CU-INC-07: asignar y reasignar operario ----------
+
+    @Transactional
+    public IncidentResponse assignOperator(Long incidentId, AssignOperatorRequest request, AuthUser user) {
+        Incident incident = getOwnedByAccountOr404(incidentId, user);
+
+        ensureNotTerminal(incident);
+        IncidentStatus status = incident.getStatus();
+        if (status == IncidentStatus.RESOLVED) {
+            throw new ConflictException("No se puede asignar una incidencia resuelta");
+        }
+
+        AppUser newOperator = validateOperator(request.operatorId(), user.accountId());
+        AppUser current = incident.getAssignee();
+        LocalDateTime now = LocalDateTime.now(clock);
+        AppUser actor = userRepository.getReferenceById(user.userId());
+
+        if (current == null) {
+            incident.setAssignee(newOperator);
+            incident.setAssignedAt(now);
+            incident.setStatus(IncidentStatus.ASSIGNED);
+            incidentHistoryService.record(incident, actor, IncidentEventType.ASSIGNED, null,
+                    newOperator.getId().toString(), null, now);
+        } else {
+            if (current.getId().equals(newOperator.getId())) {
+                throw new ConflictException("El operario ya está asignado a esta incidencia");
+            }
+            String reason = request.reason() == null ? "" : request.reason().strip();
+            if (reason.isEmpty()) {
+                throw new ConflictException("El motivo de la reasignación es obligatorio");
+            }
+
+            incident.setAssignee(newOperator);
+            incident.setAssignedAt(now);
+            incidentHistoryService.record(incident, actor, IncidentEventType.REASSIGNED, current.getId().toString(),
+                    newOperator.getId().toString(), reason, now);
+
+            if (status == IncidentStatus.IN_PROGRESS || status == IncidentStatus.PAUSED) {
+                incident.setStatus(IncidentStatus.ASSIGNED);
+                incidentHistoryService.record(incident, actor, IncidentEventType.STATUS_CHANGED, status.name(),
+                        IncidentStatus.ASSIGNED.name(), null, now);
+            }
+        }
+
+        incidentRepository.save(incident);
+        return IncidentResponse.from(incident);
+    }
+
     // ---------- CU-EXE-07: cerrar incidencia resuelta ----------
 
     @Transactional
     public IncidentResponse close(Long incidentId, AuthUser user) {
-        Incident incident = getOwnedByAccountOr404(incidentId, user);   // 404 por cuenta (ADR-001)
+        Incident incident = getOwnedByAccountOr404(incidentId, user); // 404 por cuenta (ADR-001)
 
         IncidentStatus current = incident.getStatus();
         // Única transición válida: RESOLVED -> CLOSED.
-        // Con esta sola guarda, CLOSED / REJECTED / NEW / IN_PROGRESS... caen todos en el mismo 409.
+        // Con esta sola guarda, CLOSED / REJECTED / NEW / IN_PROGRESS... caen todos en
+        // el mismo 409.
         if (current != IncidentStatus.RESOLVED) {
             throw new ConflictException("Solo se puede cerrar una incidencia resuelta");
         }
@@ -311,7 +359,7 @@ public class IncidentService {
         AppUser actor = userRepository.getReferenceById(user.userId());
 
         incident.setStatus(IncidentStatus.CLOSED);
-        incident.setClosedAt(now);                                       // sella closedAt (el campo ya existe en la entidad)
+        incident.setClosedAt(now); // sella closedAt (el campo ya existe en la entidad)
 
         incidentHistoryService.record(incident, actor, IncidentEventType.STATUS_CHANGED,
                 current.name(), IncidentStatus.CLOSED.name(), null, now);
@@ -437,5 +485,11 @@ public class IncidentService {
         if (status == IncidentStatus.CLOSED || status == IncidentStatus.REJECTED) {
             throw new ConflictException("La incidencia está cerrada");
         }
+    }
+
+    private AppUser validateOperator(Long operatorId, Long accountId) {
+        return userRepository.findByIdAndAccount_Id(operatorId, accountId)
+                .filter(u -> u.isActive() && u.getRole() == UserRole.OPERATOR)
+                .orElseThrow(() -> new ConflictException("Operario no válido"));
     }
 }
