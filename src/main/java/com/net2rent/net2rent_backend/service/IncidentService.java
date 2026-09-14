@@ -101,18 +101,11 @@ public class IncidentService {
                 countByStatus(filterSpec));
     }
 
-    // Header counters (CU-LST-05): the 5 OPEN states, over the same filters as the
-    // page.
+    // Header counters (CU-LST-05)
+    
     private Map<IncidentStatus, Long> countByStatus(Specification<Incident> filterSpec) {
-        List<IncidentStatus> headerStatuses = List.of(
-                IncidentStatus.NEW,
-                IncidentStatus.ASSIGNED,
-                IncidentStatus.IN_PROGRESS,
-                IncidentStatus.PAUSED,
-                IncidentStatus.RESOLVED);
-
         Map<IncidentStatus, Long> counters = new LinkedHashMap<>();
-        for (IncidentStatus status : headerStatuses) {
+        for (IncidentStatus status : IncidentStatus.values()) {
             counters.put(status,
                     incidentRepository.count(filterSpec.and(IncidentSpecifications.hasStatus(status))));
         }
