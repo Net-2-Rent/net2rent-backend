@@ -13,6 +13,7 @@ public record GuestIncidentDetailResponse(
         String status,
         String rejectionReason,
         LocalDateTime openedAt,
+        LocalDateTime assignedAt,
         LocalDateTime resolvedAt,
         LocalDateTime closedAt,
         List<String> images
@@ -22,9 +23,10 @@ public record GuestIncidentDetailResponse(
                 i.getId(),
                 i.getCode(),
                 i.getDescription(),
-                i.getStatus() == null ? null : i.getStatus().name(),
+                i.getStatus() == null ? null : i.getStatus().guestView().name(),
                 i.getRejectionReason(),
                 i.getOpenedAt(),
+                i.getAssignedAt(),
                 i.getResolvedAt(),
                 i.getClosedAt(),
                 i.getImages().stream().map(GuestIncidentDetailResponse::toDataUri).toList()

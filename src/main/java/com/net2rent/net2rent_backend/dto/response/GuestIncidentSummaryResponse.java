@@ -17,7 +17,7 @@ public record GuestIncidentSummaryResponse(
                 i.getId(),
                 i.getCode(),
                 i.getDescription(),
-                i.getStatus() == null ? null : i.getStatus().name(),
+                i.getStatus() == null ? null : i.getStatus().guestView().name(),
                 i.getOpenedAt(),
                 i.getResolvedAt(),
                 i.getClosedAt()
