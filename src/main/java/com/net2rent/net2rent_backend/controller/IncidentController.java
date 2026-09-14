@@ -165,21 +165,21 @@ public class IncidentController {
     public IncidentResponse reject(@PathVariable Long id,
                                    @Valid @RequestBody RejectIncidentRequest request,
                                    @AuthenticationPrincipal AuthUser user) {
-        return incidentService.reject(id, request, user);
+        return incidentExecutionService.reject(id, request, user);
     }
 
     @PatchMapping("/{id}/claim")
     @PreAuthorize("hasAuthority('SELF_ASSIGN_FROM_POOL')")
     public IncidentResponse claim(@PathVariable Long id,
                                   @AuthenticationPrincipal AuthUser user) {
-        return incidentService.claim(id, user);
+        return incidentExecutionService.claim(id, user);
     }
 
     @PatchMapping("/{id}/close")
     @PreAuthorize("hasAuthority('CLOSE_INCIDENT')")
     public IncidentResponse close(@PathVariable Long id,
                                   @AuthenticationPrincipal AuthUser user) {
-        return incidentService.close(id, user);
+        return incidentExecutionService.close(id, user);
     }
 
     @PatchMapping("/{id}/start")
@@ -279,6 +279,6 @@ public class IncidentController {
     public IncidentResponse assignOperator(@PathVariable Long id,
             @Valid @RequestBody AssignOperatorRequest request,
             @AuthenticationPrincipal AuthUser user) {
-        return incidentService.assignOperator(id, request, user);
+        return incidentExecutionService.assignOperator(id, request, user);
     }
 }

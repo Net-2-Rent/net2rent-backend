@@ -96,6 +96,8 @@ class IncidentChecklistServiceTest {
     void addItem_onClosedIncident_throws409_andDoesNotSave() {
         Incident closed = Incident.builder().id(5L).status(IncidentStatus.CLOSED).build();
         when(incidentService.getOwnedByAccountOr404(5L, coordinator)).thenReturn(closed);
+        doThrow(new ConflictException("La incidencia está cerrada"))
+                .when(incidentAccessPolicy).ensureNotTerminal(closed);
 
         assertThrows(ConflictException.class,
                 () -> service.addItem(5L, new CreateChecklistItemRequest("x"), coordinator));
@@ -156,6 +158,8 @@ class IncidentChecklistServiceTest {
     void setDone_onClosedIncident_throws409() {
         Incident closed = Incident.builder().id(5L).status(IncidentStatus.CLOSED).build();
         when(incidentService.getOwnedByAccountOr404(5L, coordinator)).thenReturn(closed);
+        doThrow(new ConflictException("La incidencia está cerrada"))
+                .when(incidentAccessPolicy).ensureNotTerminal(closed);
 
         assertThrows(ConflictException.class,
                 () -> service.setDone(5L, 30L, new UpdateChecklistItemRequest(true), coordinator));
@@ -198,6 +202,8 @@ class IncidentChecklistServiceTest {
     void deleteItem_onRejectedIncident_throws409_andDoesNotDelete() {
         Incident rejected = Incident.builder().id(5L).status(IncidentStatus.REJECTED).build();
         when(incidentService.getOwnedByAccountOr404(5L, coordinator)).thenReturn(rejected);
+        doThrow(new ConflictException("La incidencia está cerrada"))
+                .when(incidentAccessPolicy).ensureNotTerminal(rejected);
 
         assertThrows(ConflictException.class, () -> service.deleteItem(5L, 30L, coordinator));
         verify(checklistItemRepository, never()).delete(any());
