@@ -56,7 +56,7 @@ public class IncidentExecutionService {
         incidentAccessPolicy.ensureCanActOn(incident, user);
 
         IncidentStatus current = incident.getStatus();
-        if (current != IncidentStatus.ASSIGNED) {
+        if (!IncidentTransitions.STARTABLE_FROM.contains(current)) {
             throw new ConflictException("No se puede comenzar una incidencia en estado " + current);
         }
 
@@ -81,7 +81,7 @@ public class IncidentExecutionService {
         incidentAccessPolicy.ensureCanActOn(incident, user);
 
         IncidentStatus current = incident.getStatus();
-        if (current != IncidentStatus.IN_PROGRESS) {
+        if (!IncidentTransitions.PAUSABLE_FROM.contains(current)) {
             throw new ConflictException("No se puede pausar una incidencia en estado " + current);
         }
 
@@ -106,7 +106,7 @@ public class IncidentExecutionService {
         incidentAccessPolicy.ensureCanActOn(incident, user);
 
         IncidentStatus current = incident.getStatus();
-        if (current != IncidentStatus.PAUSED) {
+        if (!IncidentTransitions.RESUMABLE_FROM.contains(current)) {
             throw new ConflictException("No se puede reanudar una incidencia en estado " + current);
         }
 
@@ -130,7 +130,7 @@ public class IncidentExecutionService {
         incidentAccessPolicy.ensureCanActOn(incident, user);
 
         IncidentStatus current = incident.getStatus();
-        if (current != IncidentStatus.IN_PROGRESS && current != IncidentStatus.PAUSED) {
+        if (!IncidentTransitions.RESOLVABLE_FROM.contains(current)) {
             throw new ConflictException("No se puede resolver una incidencia en estado " + current);
         }
 
@@ -244,7 +244,7 @@ public class IncidentExecutionService {
         incidentAccessPolicy.ensureCanActOn(incident, user);
 
         IncidentStatus current = incident.getStatus();
-        if (current != IncidentStatus.RESOLVED) {
+        if (!IncidentTransitions.CLOSABLE_FROM.contains(current)) {
             throw new ConflictException("Solo se puede cerrar una incidencia resuelta");
         }
 
@@ -272,7 +272,7 @@ public class IncidentExecutionService {
         if (incident.getAssignee() != null) {
             throw new ConflictException("Esta incidencia ya ha sido asignada");
         }
-        if (incident.getStatus() != IncidentStatus.NEW) {
+        if (!IncidentTransitions.CLAIMABLE_FROM.contains(incident.getStatus())) {
             throw new ConflictException("La incidencia no está disponible en el pool");
         }
 
