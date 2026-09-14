@@ -7,5 +7,9 @@ public enum IncidentStatus {
     PAUSED,
     RESOLVED,
     CLOSED,
-    REJECTED
+    REJECTED;
+
+    public IncidentStatus guestView() {
+        return this == PAUSED ? IN_PROGRESS : this;
+    }
 }
