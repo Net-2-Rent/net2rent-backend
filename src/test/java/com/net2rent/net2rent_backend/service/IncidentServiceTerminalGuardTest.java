@@ -3,8 +3,8 @@ package com.net2rent.net2rent_backend.service;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import com.net2rent.net2rent_backend.dto.ClassifyIncidentRequest;
-import com.net2rent.net2rent_backend.dto.CorrectIncidentTextRequest;
+import com.net2rent.net2rent_backend.dto.request.ClassifyIncidentRequest;
+import com.net2rent.net2rent_backend.dto.request.CorrectIncidentTextRequest;
 import com.net2rent.net2rent_backend.exception.ConflictException;
 import com.net2rent.net2rent_backend.model.Account;
 import com.net2rent.net2rent_backend.model.Incident;

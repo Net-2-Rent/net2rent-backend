@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import com.net2rent.net2rent_backend.dto.AssignOperatorRequest;
+import com.net2rent.net2rent_backend.dto.request.AssignOperatorRequest;
 import com.net2rent.net2rent_backend.exception.ConflictException;
 import com.net2rent.net2rent_backend.model.Account;
 import com.net2rent.net2rent_backend.model.AppUser;

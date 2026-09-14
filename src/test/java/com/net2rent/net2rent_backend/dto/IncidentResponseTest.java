@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.time.LocalDateTime;
 
+import com.net2rent.net2rent_backend.dto.response.IncidentResponse;
 import org.junit.jupiter.api.Test;
 
 import com.net2rent.net2rent_backend.model.Account;

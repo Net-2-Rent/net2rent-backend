@@ -3,9 +3,9 @@ package com.net2rent.net2rent_backend.controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.net2rent.net2rent_backend.dto.ChangePasswordRequest;
-import com.net2rent.net2rent_backend.dto.LoginRequest;
-import com.net2rent.net2rent_backend.dto.LoginResponse;
+import com.net2rent.net2rent_backend.dto.request.ChangePasswordRequest;
+import com.net2rent.net2rent_backend.dto.request.LoginRequest;
+import com.net2rent.net2rent_backend.dto.response.LoginResponse;
 import com.net2rent.net2rent_backend.security.AuthUser;
 import com.net2rent.net2rent_backend.service.AuthService;
 

@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import com.net2rent.net2rent_backend.dto.RejectIncidentRequest;
+import com.net2rent.net2rent_backend.dto.request.RejectIncidentRequest;
 import com.net2rent.net2rent_backend.exception.ConflictException;
 import com.net2rent.net2rent_backend.exception.NotFoundException;
 import com.net2rent.net2rent_backend.model.Account;

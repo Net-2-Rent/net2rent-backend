@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import com.net2rent.net2rent_backend.dto.IncidentResponse;
+import com.net2rent.net2rent_backend.dto.response.IncidentResponse;
 import com.net2rent.net2rent_backend.dto.request.CreateGuestIncidentRequest;
 import com.net2rent.net2rent_backend.dto.request.CreatePhoneIncidentRequest;
 import com.net2rent.net2rent_backend.dto.response.GuestIncidentResponse;

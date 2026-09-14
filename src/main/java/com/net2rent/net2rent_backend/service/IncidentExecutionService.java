@@ -1,12 +1,12 @@
 package com.net2rent.net2rent_backend.service;
 
-import com.net2rent.net2rent_backend.dto.IncidentResponse;
-import com.net2rent.net2rent_backend.dto.PauseIncidentRequest;
-import com.net2rent.net2rent_backend.dto.ResolveIncidentRequest;
-import com.net2rent.net2rent_backend.dto.AssignOperatorRequest;
-import com.net2rent.net2rent_backend.dto.RejectIncidentRequest;
-import com.net2rent.net2rent_backend.exception.NotFoundException;
+import com.net2rent.net2rent_backend.dto.request.AssignOperatorRequest;
+import com.net2rent.net2rent_backend.dto.request.RejectIncidentRequest;
+import com.net2rent.net2rent_backend.dto.response.IncidentResponse;
+import com.net2rent.net2rent_backend.dto.request.PauseIncidentRequest;
+import com.net2rent.net2rent_backend.dto.request.ResolveIncidentRequest;
 import com.net2rent.net2rent_backend.exception.ConflictException;
+import com.net2rent.net2rent_backend.exception.NotFoundException;
 import com.net2rent.net2rent_backend.model.AppUser;
 import com.net2rent.net2rent_backend.model.Incident;
 import com.net2rent.net2rent_backend.model.enums.IncidentEventType;

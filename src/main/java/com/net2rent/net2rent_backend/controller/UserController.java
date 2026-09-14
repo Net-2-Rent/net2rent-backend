@@ -1,9 +1,9 @@
 package com.net2rent.net2rent_backend.controller;
 
-import com.net2rent.net2rent_backend.dto.*;
 import com.net2rent.net2rent_backend.dto.request.CreateUserRequest;
 import com.net2rent.net2rent_backend.dto.request.ResetPasswordRequest;
 import com.net2rent.net2rent_backend.dto.request.UpdateUserRequest;
+import com.net2rent.net2rent_backend.dto.response.OperatorResponse;
 import com.net2rent.net2rent_backend.dto.response.UserResponse;
 import com.net2rent.net2rent_backend.model.enums.UserRole;
 import com.net2rent.net2rent_backend.security.AuthUser;

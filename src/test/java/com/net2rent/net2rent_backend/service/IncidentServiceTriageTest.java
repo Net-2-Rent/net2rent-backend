@@ -4,8 +4,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import com.net2rent.net2rent_backend.dto.ClassifyIncidentRequest;
-import com.net2rent.net2rent_backend.dto.CorrectIncidentTextRequest;
+import com.net2rent.net2rent_backend.dto.request.ClassifyIncidentRequest;
+import com.net2rent.net2rent_backend.dto.request.CorrectIncidentTextRequest;
 import com.net2rent.net2rent_backend.exception.NotFoundException;
 import com.net2rent.net2rent_backend.model.Account;
 import com.net2rent.net2rent_backend.model.AppUser;
