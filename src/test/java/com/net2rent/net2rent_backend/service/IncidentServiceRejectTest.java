@@ -11,17 +11,15 @@ import com.net2rent.net2rent_backend.model.Account;
 import com.net2rent.net2rent_backend.model.Incident;
 import com.net2rent.net2rent_backend.model.Lodging;
 import com.net2rent.net2rent_backend.model.enums.*;
-import com.net2rent.net2rent_backend.repository.IncidentCounterRepository;
 import com.net2rent.net2rent_backend.repository.IncidentRepository;
-import com.net2rent.net2rent_backend.repository.LodgingRepository;
 import com.net2rent.net2rent_backend.repository.UserRepository;
 import com.net2rent.net2rent_backend.security.AuthUser;
+import com.net2rent.net2rent_backend.security.IncidentAccessPolicy;
 
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,14 +30,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class IncidentServiceRejectTest {
 
+    @Mock private IncidentService incidentService;
+    @Mock private IncidentAccessPolicy incidentAccessPolicy;
     @Mock private IncidentRepository incidentRepository;
-    @Mock private IncidentCounterRepository incidentCounterRepository;
     @Mock private IncidentHistoryService incidentHistoryService;
-    @Mock private LodgingRepository lodgingRepository;
     @Mock private UserRepository userRepository;
-    @Mock private IncidentImageService incidentImageService;
+    @Mock private IncidentChecklistService incidentChecklistService;
 
-    private IncidentService service;
+    private IncidentExecutionService service;
 
     private final Clock clock =
             Clock.fixed(Instant.parse("2026-09-02T08:00:00Z"), ZoneOffset.UTC);
@@ -52,9 +50,8 @@ class IncidentServiceRejectTest {
 
     @BeforeEach
     void setUp() {
-        service = new IncidentService(
-                incidentRepository, incidentCounterRepository, incidentHistoryService,
-                lodgingRepository, userRepository, incidentImageService, clock);
+        service = new IncidentExecutionService(incidentService, incidentAccessPolicy,
+                incidentRepository, incidentHistoryService, userRepository, clock, incidentChecklistService);
 
         account = Account.builder().id(1L).name("net2Rent Demo").build();
         lodging = Lodging.builder()
@@ -82,7 +79,7 @@ class IncidentServiceRejectTest {
     @Test
     void reject_fromNew_setsRejectedStatusAndReason_recordsHistory() {
         Incident incident = incidentWithStatus(IncidentStatus.NEW);
-        when(incidentRepository.findByIdAndAccount_Id(100L, 1L)).thenReturn(Optional.of(incident));
+        when(incidentService.getOwnedByAccountOr404(100L, coordinator)).thenReturn(incident);
 
         service.reject(100L, new RejectIncidentRequest("  Duplicada  "), coordinator);
 
@@ -98,7 +95,7 @@ class IncidentServiceRejectTest {
     @Test
     void reject_fromInProgress_isAllowed() {
         Incident incident = incidentWithStatus(IncidentStatus.IN_PROGRESS);
-        when(incidentRepository.findByIdAndAccount_Id(100L, 1L)).thenReturn(Optional.of(incident));
+        when(incidentService.getOwnedByAccountOr404(100L, coordinator)).thenReturn(incident);
 
         service.reject(100L, new RejectIncidentRequest("No procede"), coordinator);
 
@@ -108,17 +105,18 @@ class IncidentServiceRejectTest {
                 eq("IN_PROGRESS"), eq("REJECTED"), isNull(), any(LocalDateTime.class));
     }
 
-    // ---------- Status that are not rejectables ----------
+    // ---------- Status que no son rechazables ----------
 
     @Test
     void reject_whenAlreadyClosed_throwsConflict() {
         Incident incident = incidentWithStatus(IncidentStatus.CLOSED);
-        when(incidentRepository.findByIdAndAccount_Id(100L, 1L)).thenReturn(Optional.of(incident));
+        when(incidentService.getOwnedByAccountOr404(100L, coordinator)).thenReturn(incident);
+        doThrow(new ConflictException("La incidencia está cerrada"))
+                .when(incidentAccessPolicy).ensureNotTerminal(incident);
 
         assertThrows(ConflictException.class, () ->
                 service.reject(100L, new RejectIncidentRequest("Duplicada"), coordinator));
 
-        // No cambia nada ni deja rastro
         assertEquals(IncidentStatus.CLOSED, incident.getStatus());
         verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any(), any());
         verify(incidentRepository, never()).save(any());
@@ -127,7 +125,9 @@ class IncidentServiceRejectTest {
     @Test
     void reject_whenAlreadyRejected_throwsConflict() {
         Incident incident = incidentWithStatus(IncidentStatus.REJECTED);
-        when(incidentRepository.findByIdAndAccount_Id(100L, 1L)).thenReturn(Optional.of(incident));
+        when(incidentService.getOwnedByAccountOr404(100L, coordinator)).thenReturn(incident);
+        doThrow(new ConflictException("La incidencia está cerrada"))
+                .when(incidentAccessPolicy).ensureNotTerminal(incident);
 
         assertThrows(ConflictException.class, () ->
                 service.reject(100L, new RejectIncidentRequest("Duplicada"), coordinator));
@@ -139,7 +139,7 @@ class IncidentServiceRejectTest {
     @Test
     void reject_whenResolved_throwsConflict() {
         Incident incident = incidentWithStatus(IncidentStatus.RESOLVED);
-        when(incidentRepository.findByIdAndAccount_Id(100L, 1L)).thenReturn(Optional.of(incident));
+        when(incidentService.getOwnedByAccountOr404(100L, coordinator)).thenReturn(incident);
 
         assertThrows(ConflictException.class, () ->
                 service.reject(100L, new RejectIncidentRequest("Duplicada"), coordinator));
@@ -148,11 +148,12 @@ class IncidentServiceRejectTest {
         verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any(), any());
     }
 
-    // ---------- Account aisolation ----------
+    // ---------- Aislamiento de cuenta ----------
 
     @Test
     void reject_whenIncidentBelongsToAnotherAccount_throwsNotFound() {
-        when(incidentRepository.findByIdAndAccount_Id(999L, 1L)).thenReturn(Optional.empty());
+        when(incidentService.getOwnedByAccountOr404(999L, coordinator))
+                .thenThrow(new NotFoundException("Incidencia no encontrada"));
 
         assertThrows(NotFoundException.class, () ->
                 service.reject(999L, new RejectIncidentRequest("Duplicada"), coordinator));

@@ -17,6 +17,7 @@ import com.net2rent.net2rent_backend.repository.IncidentRepository;
 import com.net2rent.net2rent_backend.repository.LodgingRepository;
 import com.net2rent.net2rent_backend.repository.UserRepository;
 import com.net2rent.net2rent_backend.security.AuthUser;
+import com.net2rent.net2rent_backend.security.IncidentAccessPolicy;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -42,6 +43,7 @@ class IncidentServiceTest {
     @Mock private LodgingRepository lodgingRepository;
     @Mock private UserRepository userRepository;
     @Mock private IncidentImageService incidentImageService;
+    @Mock private IncidentAccessPolicy incidentAccessPolicy;
 
     private IncidentService service;
 
@@ -58,7 +60,7 @@ class IncidentServiceTest {
     void setUp() {
         service = new IncidentService(
                 incidentRepository, incidentCounterRepository, incidentHistoryService,
-                lodgingRepository, userRepository, incidentImageService, clock);
+                lodgingRepository, userRepository, incidentImageService, incidentAccessPolicy, clock);
 
         account = Account.builder().id(1L).name("net2Rent Demo").build();
         activeLodging = Lodging.builder()
