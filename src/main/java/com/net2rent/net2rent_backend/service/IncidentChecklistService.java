@@ -8,7 +8,6 @@ import com.net2rent.net2rent_backend.exception.ConflictException;
 import com.net2rent.net2rent_backend.exception.NotFoundException;
 import com.net2rent.net2rent_backend.model.Incident;
 import com.net2rent.net2rent_backend.model.IncidentCheckListItem;
-import com.net2rent.net2rent_backend.model.enums.IncidentStatus;
 import com.net2rent.net2rent_backend.repository.IncidentCheckListItemRepository;
 import com.net2rent.net2rent_backend.repository.UserRepository;
 import com.net2rent.net2rent_backend.security.AuthUser;
@@ -60,7 +59,7 @@ public class IncidentChecklistService {
     public List<ChecklistItemResponse> addItem(Long incidentId, CreateChecklistItemRequest request, AuthUser user) {
         Incident incident = incidentService.getOwnedByAccountOr404(incidentId, user);
         incidentAccessPolicy.ensureCanActOn(incident, user);
-        ensureNotTerminal(incident);
+        incidentAccessPolicy.ensureNotTerminal(incident);
 
         IncidentCheckListItem item = IncidentCheckListItem.builder()
                 .incident(incident)
@@ -94,7 +93,7 @@ public class IncidentChecklistService {
             UpdateChecklistItemRequest request, AuthUser user) {
         Incident incident = incidentService.getOwnedByAccountOr404(incidentId, user);
         incidentAccessPolicy.ensureCanActOn(incident, user);
-        ensureNotTerminal(incident);
+        incidentAccessPolicy.ensureNotTerminal(incident);
 
         IncidentCheckListItem item = checklistItemRepository
                 .findByIdAndIncident_Id(itemId, incident.getId())
@@ -132,7 +131,7 @@ public class IncidentChecklistService {
     public List<ChecklistItemResponse> deleteItem(Long incidentId, Long itemId, AuthUser user) {
         Incident incident = incidentService.getOwnedByAccountOr404(incidentId, user);
         incidentAccessPolicy.ensureCanActOn(incident, user);
-        ensureNotTerminal(incident);
+        incidentAccessPolicy.ensureNotTerminal(incident);
 
         IncidentCheckListItem item = checklistItemRepository
                 .findByIdAndIncident_Id(itemId, incident.getId())
@@ -156,7 +155,7 @@ public class IncidentChecklistService {
             AuthUser user) {
         Incident incident = incidentService.getOwnedByAccountOr404(incidentId, user);
         incidentAccessPolicy.ensureCanActOn(incident, user);
-        ensureNotTerminal(incident);
+        incidentAccessPolicy.ensureNotTerminal(incident);
 
         return persistOrder(incident, request.orderedIds());
     }
@@ -194,12 +193,5 @@ public class IncidentChecklistService {
                 .map(id -> byId.get(id))
                 .map(ChecklistItemResponse::from)
                 .toList();
-    }
-
-    private void ensureNotTerminal(Incident incident) {
-        if (incident.getStatus() == IncidentStatus.CLOSED
-                || incident.getStatus() == IncidentStatus.REJECTED) {
-            throw new ConflictException("La incidencia está cerrada");
-        }
     }
 }

@@ -11,11 +11,10 @@ import com.net2rent.net2rent_backend.model.AppUser;
 import com.net2rent.net2rent_backend.model.Incident;
 import com.net2rent.net2rent_backend.model.Lodging;
 import com.net2rent.net2rent_backend.model.enums.*;
-import com.net2rent.net2rent_backend.repository.IncidentCounterRepository;
 import com.net2rent.net2rent_backend.repository.IncidentRepository;
-import com.net2rent.net2rent_backend.repository.LodgingRepository;
 import com.net2rent.net2rent_backend.repository.UserRepository;
 import com.net2rent.net2rent_backend.security.AuthUser;
+import com.net2rent.net2rent_backend.security.IncidentAccessPolicy;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -32,14 +31,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class IncidentServiceClaimTest {
 
+    @Mock private IncidentService incidentService;
+    @Mock private IncidentAccessPolicy incidentAccessPolicy;
     @Mock private IncidentRepository incidentRepository;
-    @Mock private IncidentCounterRepository incidentCounterRepository;
     @Mock private IncidentHistoryService incidentHistoryService;
-    @Mock private LodgingRepository lodgingRepository;
     @Mock private UserRepository userRepository;
-    @Mock private IncidentImageService incidentImageService;
+    @Mock private IncidentChecklistService incidentChecklistService;
 
-    private IncidentService service;
+    private IncidentExecutionService service;
 
     private final Clock clock =
             Clock.fixed(Instant.parse("2026-09-08T08:00:00Z"), ZoneOffset.UTC);
@@ -52,9 +51,8 @@ class IncidentServiceClaimTest {
 
     @BeforeEach
     void setUp() {
-        service = new IncidentService(
-                incidentRepository, incidentCounterRepository, incidentHistoryService,
-                lodgingRepository, userRepository, incidentImageService, clock);
+        service = new IncidentExecutionService(incidentService, incidentAccessPolicy,
+                incidentRepository, incidentHistoryService, userRepository, clock, incidentChecklistService);
 
         account = Account.builder().id(1L).name("net2Rent Demo").build();
         lodging = Lodging.builder()
@@ -102,7 +100,7 @@ class IncidentServiceClaimTest {
     void claim_whenAlreadyAssigned_throwsConflict_withBacklogMessage() {
         Incident incident = poolIncident();
         incident.setStatus(IncidentStatus.ASSIGNED);
-        incident.setAssignee(AppUser.builder().id(99L).build()); // ya tiene operario
+        incident.setAssignee(AppUser.builder().id(99L).build());
 
         when(incidentRepository.findByIdAndAccount_IdForUpdate(100L, 1L))
                 .thenReturn(Optional.of(incident));

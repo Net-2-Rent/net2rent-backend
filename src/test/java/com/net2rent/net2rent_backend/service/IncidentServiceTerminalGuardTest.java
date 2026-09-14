@@ -15,6 +15,7 @@ import com.net2rent.net2rent_backend.repository.IncidentRepository;
 import com.net2rent.net2rent_backend.repository.LodgingRepository;
 import com.net2rent.net2rent_backend.repository.UserRepository;
 import com.net2rent.net2rent_backend.security.AuthUser;
+import com.net2rent.net2rent_backend.security.IncidentAccessPolicy;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -38,6 +39,7 @@ class IncidentServiceTerminalGuardTest {
     @Mock private LodgingRepository lodgingRepository;
     @Mock private UserRepository userRepository;
     @Mock private IncidentImageService incidentImageService;
+    @Mock private IncidentAccessPolicy incidentAccessPolicy;
 
     private IncidentService service;
 
@@ -54,7 +56,7 @@ class IncidentServiceTerminalGuardTest {
     void setUp() {
         service = new IncidentService(
                 incidentRepository, incidentCounterRepository, incidentHistoryService,
-                lodgingRepository, userRepository, incidentImageService, clock);
+                lodgingRepository, userRepository, incidentImageService, incidentAccessPolicy, clock);
 
         account = Account.builder().id(1L).name("net2Rent Demo").build();
         lodging = Lodging.builder()
@@ -82,6 +84,8 @@ class IncidentServiceTerminalGuardTest {
     void classify_whenClosed_throwsConflict() {
         Incident incident = incidentWithStatus(IncidentStatus.CLOSED);
         when(incidentRepository.findByIdAndAccount_Id(100L, 1L)).thenReturn(Optional.of(incident));
+        doThrow(new ConflictException("La incidencia está cerrada"))
+                .when(incidentAccessPolicy).ensureNotTerminal(incident);
 
         assertThrows(ConflictException.class, () ->
                 service.classify(100L,
@@ -97,6 +101,8 @@ class IncidentServiceTerminalGuardTest {
     void correctText_whenRejected_throwsConflict() {
         Incident incident = incidentWithStatus(IncidentStatus.REJECTED);
         when(incidentRepository.findByIdAndAccount_Id(100L, 1L)).thenReturn(Optional.of(incident));
+        doThrow(new ConflictException("La incidencia está cerrada"))
+                .when(incidentAccessPolicy).ensureNotTerminal(incident);
 
         assertThrows(ConflictException.class, () ->
                 service.correctText(100L,
@@ -111,6 +117,8 @@ class IncidentServiceTerminalGuardTest {
     void markUrgent_whenClosed_throwsConflict() {
         Incident incident = incidentWithStatus(IncidentStatus.CLOSED);
         when(incidentRepository.findByIdAndAccount_Id(100L, 1L)).thenReturn(Optional.of(incident));
+        doThrow(new ConflictException("La incidencia está cerrada"))
+                .when(incidentAccessPolicy).ensureNotTerminal(incident);
 
         assertThrows(ConflictException.class, () ->
                 service.markUrgent(100L, coordinator));

@@ -10,17 +10,15 @@ import com.net2rent.net2rent_backend.model.Account;
 import com.net2rent.net2rent_backend.model.Incident;
 import com.net2rent.net2rent_backend.model.Lodging;
 import com.net2rent.net2rent_backend.model.enums.*;
-import com.net2rent.net2rent_backend.repository.IncidentCounterRepository;
 import com.net2rent.net2rent_backend.repository.IncidentRepository;
-import com.net2rent.net2rent_backend.repository.LodgingRepository;
 import com.net2rent.net2rent_backend.repository.UserRepository;
 import com.net2rent.net2rent_backend.security.AuthUser;
+import com.net2rent.net2rent_backend.security.IncidentAccessPolicy;
 
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,14 +29,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class IncidentServiceCloseTest {
 
+    @Mock private IncidentService incidentService;
+    @Mock private IncidentAccessPolicy incidentAccessPolicy;
     @Mock private IncidentRepository incidentRepository;
-    @Mock private IncidentCounterRepository incidentCounterRepository;
     @Mock private IncidentHistoryService incidentHistoryService;
-    @Mock private LodgingRepository lodgingRepository;
     @Mock private UserRepository userRepository;
-    @Mock private IncidentImageService incidentImageService;
+    @Mock private IncidentChecklistService incidentChecklistService;
 
-    private IncidentService service;
+    private IncidentExecutionService service;
 
     private final Clock clock =
             Clock.fixed(Instant.parse("2026-09-02T08:00:00Z"), ZoneOffset.UTC);
@@ -51,9 +49,8 @@ class IncidentServiceCloseTest {
 
     @BeforeEach
     void setUp() {
-        service = new IncidentService(
-                incidentRepository, incidentCounterRepository, incidentHistoryService,
-                lodgingRepository, userRepository, incidentImageService, clock);
+        service = new IncidentExecutionService(incidentService, incidentAccessPolicy,
+                incidentRepository, incidentHistoryService, userRepository, clock, incidentChecklistService);
 
         account = Account.builder().id(1L).name("net2Rent Demo").build();
         lodging = Lodging.builder()
@@ -81,7 +78,7 @@ class IncidentServiceCloseTest {
     @Test
     void close_fromResolved_setsClosedStatusAndClosedAt_recordsHistory() {
         Incident incident = incidentWithStatus(IncidentStatus.RESOLVED);
-        when(incidentRepository.findByIdAndAccount_Id(100L, 1L)).thenReturn(Optional.of(incident));
+        when(incidentService.getOwnedByAccountOr404(100L, coordinator)).thenReturn(incident);
 
         service.close(100L, coordinator);
 
@@ -99,11 +96,10 @@ class IncidentServiceCloseTest {
     @Test
     void close_whenInProgress_throwsConflict() {
         Incident incident = incidentWithStatus(IncidentStatus.IN_PROGRESS);
-        when(incidentRepository.findByIdAndAccount_Id(100L, 1L)).thenReturn(Optional.of(incident));
+        when(incidentService.getOwnedByAccountOr404(100L, coordinator)).thenReturn(incident);
 
         assertThrows(ConflictException.class, () -> service.close(100L, coordinator));
 
-        // No cambia nada ni deja rastro
         assertEquals(IncidentStatus.IN_PROGRESS, incident.getStatus());
         assertNull(incident.getClosedAt());
         verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any(), any());
@@ -113,7 +109,7 @@ class IncidentServiceCloseTest {
     @Test
     void close_whenNew_throwsConflict() {
         Incident incident = incidentWithStatus(IncidentStatus.NEW);
-        when(incidentRepository.findByIdAndAccount_Id(100L, 1L)).thenReturn(Optional.of(incident));
+        when(incidentService.getOwnedByAccountOr404(100L, coordinator)).thenReturn(incident);
 
         assertThrows(ConflictException.class, () -> service.close(100L, coordinator));
 
@@ -125,7 +121,7 @@ class IncidentServiceCloseTest {
     @Test
     void close_whenAlreadyClosed_throwsConflict() {
         Incident incident = incidentWithStatus(IncidentStatus.CLOSED);
-        when(incidentRepository.findByIdAndAccount_Id(100L, 1L)).thenReturn(Optional.of(incident));
+        when(incidentService.getOwnedByAccountOr404(100L, coordinator)).thenReturn(incident);
 
         assertThrows(ConflictException.class, () -> service.close(100L, coordinator));
 
@@ -136,7 +132,7 @@ class IncidentServiceCloseTest {
     @Test
     void close_whenRejected_throwsConflict() {
         Incident incident = incidentWithStatus(IncidentStatus.REJECTED);
-        when(incidentRepository.findByIdAndAccount_Id(100L, 1L)).thenReturn(Optional.of(incident));
+        when(incidentService.getOwnedByAccountOr404(100L, coordinator)).thenReturn(incident);
 
         assertThrows(ConflictException.class, () -> service.close(100L, coordinator));
 
@@ -149,7 +145,8 @@ class IncidentServiceCloseTest {
 
     @Test
     void close_whenIncidentBelongsToAnotherAccount_throwsNotFound() {
-        when(incidentRepository.findByIdAndAccount_Id(999L, 1L)).thenReturn(Optional.empty());
+        when(incidentService.getOwnedByAccountOr404(999L, coordinator))
+                .thenThrow(new NotFoundException("Incidencia no encontrada"));
 
         assertThrows(NotFoundException.class, () -> service.close(999L, coordinator));
 

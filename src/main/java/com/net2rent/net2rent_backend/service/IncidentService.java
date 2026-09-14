@@ -1,10 +1,8 @@
 package com.net2rent.net2rent_backend.service;
 
-import com.net2rent.net2rent_backend.dto.AssignOperatorRequest;
 import com.net2rent.net2rent_backend.dto.ClassifyIncidentRequest;
 import com.net2rent.net2rent_backend.dto.CorrectIncidentTextRequest;
 import com.net2rent.net2rent_backend.dto.IncidentResponse;
-import com.net2rent.net2rent_backend.dto.RejectIncidentRequest;
 import com.net2rent.net2rent_backend.dto.request.IncidentFilter;
 import com.net2rent.net2rent_backend.dto.response.GuestIncidentSummaryResponse;
 import com.net2rent.net2rent_backend.dto.request.CreatePhoneIncidentRequest;
@@ -29,6 +27,7 @@ import com.net2rent.net2rent_backend.repository.UserRepository;
 import com.net2rent.net2rent_backend.repository.spec.IncidentSpecifications;
 import com.net2rent.net2rent_backend.repository.spec.SortField;
 import com.net2rent.net2rent_backend.security.AuthUser;
+import com.net2rent.net2rent_backend.security.IncidentAccessPolicy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -51,20 +50,23 @@ public class IncidentService {
     private final LodgingRepository lodgingRepository;
     private final UserRepository userRepository;
     private final IncidentImageService incidentImageService;
+    private final IncidentAccessPolicy incidentAccessPolicy;
     private final Clock clock;
 
     public IncidentService(IncidentRepository incidentRepository,
-            IncidentCounterRepository incidentCounterRepository,
-            IncidentHistoryService incidentHistoryService,
-            LodgingRepository lodgingRepository,
-            UserRepository userRepository, IncidentImageService incidentImageService,
-            Clock clock) {
+                           IncidentCounterRepository incidentCounterRepository,
+                           IncidentHistoryService incidentHistoryService,
+                           LodgingRepository lodgingRepository,
+                           UserRepository userRepository, IncidentImageService incidentImageService,
+                           IncidentAccessPolicy incidentAccessPolicy,
+                           Clock clock) {
         this.incidentRepository = incidentRepository;
         this.incidentCounterRepository = incidentCounterRepository;
         this.incidentHistoryService = incidentHistoryService;
         this.lodgingRepository = lodgingRepository;
         this.userRepository = userRepository;
         this.incidentImageService = incidentImageService;
+        this.incidentAccessPolicy = incidentAccessPolicy;
         this.clock = clock;
     }
 
@@ -200,7 +202,8 @@ public class IncidentService {
     @Transactional
     public IncidentResponse classify(Long incidentId, ClassifyIncidentRequest request, AuthUser user) {
         Incident incident = getOwnedByAccountOr404(incidentId, user);
-        ensureNotTerminal(incident);
+        incidentAccessPolicy.ensureNotTerminal(incident);
+
         LocalDateTime now = LocalDateTime.now(clock);
         AppUser actorEntity = userRepository.getReferenceById(user.userId());
 
@@ -227,7 +230,7 @@ public class IncidentService {
     @Transactional
     public IncidentResponse markUrgent(Long incidentId, AuthUser user) {
         Incident incident = getOwnedByAccountOr404(incidentId, user);
-        ensureNotTerminal(incident);
+        incidentAccessPolicy.ensureNotTerminal(incident);
 
         IncidentPriority oldPriority = incident.getPriority();
         if (oldPriority != IncidentPriority.URGENT) {
@@ -245,7 +248,8 @@ public class IncidentService {
     @Transactional
     public IncidentResponse correctText(Long incidentId, CorrectIncidentTextRequest request, AuthUser user) {
         Incident incident = getOwnedByAccountOr404(incidentId, user);
-        ensureNotTerminal(incident);
+        incidentAccessPolicy.ensureNotTerminal(incident);
+
         LocalDateTime now = LocalDateTime.now(clock);
         AppUser actorEntity = userRepository.getReferenceById(user.userId());
 
@@ -263,134 +267,6 @@ public class IncidentService {
             incidentHistoryService.record(incident, actorEntity, IncidentEventType.TITLE_CHANGED,
                     oldTitle, newTitle, null, now);
         }
-
-        incidentRepository.save(incident);
-        return IncidentResponse.from(incident);
-    }
-
-    // ---------- CU-INC-08: rechazar incidencia ----------
-
-    @Transactional
-    public IncidentResponse reject(Long incidentId, RejectIncidentRequest request, AuthUser user) {
-        Incident incident = getOwnedByAccountOr404(incidentId, user);
-
-        IncidentStatus current = incident.getStatus();
-        ensureNotTerminal(incident);
-        if (current == IncidentStatus.RESOLVED) {
-            throw new ConflictException("No se puede rechazar una incidencia ya resuelta");
-        }
-
-        LocalDateTime now = LocalDateTime.now(clock);
-        AppUser actor = userRepository.getReferenceById(user.userId());
-
-        incident.setStatus(IncidentStatus.REJECTED);
-        incident.setRejectionReason(request.reason().strip());
-
-        incidentHistoryService.record(incident, actor, IncidentEventType.STATUS_CHANGED,
-                current.name(), IncidentStatus.REJECTED.name(), null, now);
-
-        incidentRepository.save(incident);
-        return IncidentResponse.from(incident);
-    }
-
-    // ---------- CU-INC-06 / CU-INC-07: asignar y reasignar operario ----------
-
-    @Transactional
-    public IncidentResponse assignOperator(Long incidentId, AssignOperatorRequest request, AuthUser user) {
-        Incident incident = getOwnedByAccountOr404(incidentId, user);
-
-        ensureNotTerminal(incident);
-        IncidentStatus status = incident.getStatus();
-        if (status == IncidentStatus.RESOLVED) {
-            throw new ConflictException("No se puede asignar una incidencia resuelta");
-        }
-
-        AppUser newOperator = validateOperator(request.operatorId(), user.accountId());
-        AppUser current = incident.getAssignee();
-        LocalDateTime now = LocalDateTime.now(clock);
-        AppUser actor = userRepository.getReferenceById(user.userId());
-
-        if (current == null) {
-            incident.setAssignee(newOperator);
-            incident.setAssignedAt(now);
-            incident.setStatus(IncidentStatus.ASSIGNED);
-            incidentHistoryService.record(incident, actor, IncidentEventType.ASSIGNED, null,
-                    newOperator.getId().toString(), null, now);
-        } else {
-            if (current.getId().equals(newOperator.getId())) {
-                throw new ConflictException("El operario ya está asignado a esta incidencia");
-            }
-            String reason = request.reason() == null ? "" : request.reason().strip();
-            if (reason.isEmpty()) {
-                throw new ConflictException("El motivo de la reasignación es obligatorio");
-            }
-
-            incident.setAssignee(newOperator);
-            incident.setAssignedAt(now);
-            incidentHistoryService.record(incident, actor, IncidentEventType.REASSIGNED, current.getId().toString(),
-                    newOperator.getId().toString(), reason, now);
-
-            if (status == IncidentStatus.IN_PROGRESS || status == IncidentStatus.PAUSED) {
-                incident.setStatus(IncidentStatus.ASSIGNED);
-                incidentHistoryService.record(incident, actor, IncidentEventType.STATUS_CHANGED, status.name(),
-                        IncidentStatus.ASSIGNED.name(), null, now);
-            }
-        }
-
-        incidentRepository.save(incident);
-        return IncidentResponse.from(incident);
-    }
-
-    // ---------- CU-EXE-07: cerrar incidencia resuelta ----------
-
-    @Transactional
-    public IncidentResponse close(Long incidentId, AuthUser user) {
-        Incident incident = getOwnedByAccountOr404(incidentId, user); // 404 por cuenta (ADR-001)
-
-        IncidentStatus current = incident.getStatus();
-        // Única transición válida: RESOLVED -> CLOSED.
-        // Con esta sola guarda, CLOSED / REJECTED / NEW / IN_PROGRESS... caen todos en
-        // el mismo 409.
-        if (current != IncidentStatus.RESOLVED) {
-            throw new ConflictException("Solo se puede cerrar una incidencia resuelta");
-        }
-
-        LocalDateTime now = LocalDateTime.now(clock);
-        AppUser actor = userRepository.getReferenceById(user.userId());
-
-        incident.setStatus(IncidentStatus.CLOSED);
-        incident.setClosedAt(now); // sella closedAt (el campo ya existe en la entidad)
-
-        incidentHistoryService.record(incident, actor, IncidentEventType.STATUS_CHANGED,
-                current.name(), IncidentStatus.CLOSED.name(), null, now);
-
-        incidentRepository.save(incident);
-        return IncidentResponse.from(incident);
-    }
-
-    // ---------- autoassign from the pool ----------
-    @Transactional
-    public IncidentResponse claim(Long incidentId, AuthUser user) {
-        Incident incident = incidentRepository
-                .findByIdAndAccount_IdForUpdate(incidentId, user.accountId())
-                .orElseThrow(() -> new NotFoundException("Incidencia no encontrada"));
-
-        if (incident.getAssignee() != null) {
-            throw new ConflictException("Esta incidencia ya ha sido asignada");
-        }
-        if (incident.getStatus() != IncidentStatus.NEW) {
-            throw new ConflictException("La incidencia no está disponible en el pool");
-        }
-
-        LocalDateTime now = LocalDateTime.now(clock);
-        AppUser operator = userRepository.getReferenceById(user.userId());
-
-        incident.setAssignee(operator);
-        incident.setStatus(IncidentStatus.ASSIGNED);
-        incident.setAssignedAt(now);
-
-        incidentHistoryService.record(incident, operator, IncidentEventType.ASSIGNED,
-                null, operator.getId().toString(), null, now);
 
         incidentRepository.save(incident);
         return IncidentResponse.from(incident);
@@ -480,14 +356,7 @@ public class IncidentService {
         return value == null ? null : value.name();
     }
 
-    private void ensureNotTerminal(Incident incident) {
-        IncidentStatus status = incident.getStatus();
-        if (status == IncidentStatus.CLOSED || status == IncidentStatus.REJECTED) {
-            throw new ConflictException("La incidencia está cerrada");
-        }
-    }
-
-    private AppUser validateOperator(Long operatorId, Long accountId) {
+    AppUser validateOperator(Long operatorId, Long accountId) {
         return userRepository.findByIdAndAccount_Id(operatorId, accountId)
                 .filter(u -> u.isActive() && u.getRole() == UserRole.OPERATOR)
                 .orElseThrow(() -> new ConflictException("Operario no válido"));
