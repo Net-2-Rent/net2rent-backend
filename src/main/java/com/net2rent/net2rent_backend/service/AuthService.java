@@ -1,6 +1,7 @@
 package com.net2rent.net2rent_backend.service;
 
 import java.time.LocalDateTime;
+import java.time.Clock;
 import java.util.Locale;
 
 import com.net2rent.net2rent_backend.dto.request.ChangePasswordRequest;
@@ -24,15 +25,18 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final RateLimiter rateLimiter;
+    private final Clock clock;
 
     public AuthService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
                        JwtService jwtService,
-                       RateLimiter rateLimiter) {
+                       RateLimiter rateLimiter,
+                       Clock clock) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.rateLimiter = rateLimiter;
+        this.clock = clock;
     }
 
     @Transactional
@@ -57,7 +61,7 @@ public class AuthService {
 
         rateLimiter.reset(key);
 
-        user.setLastLoginAt(LocalDateTime.now());
+        user.setLastLoginAt(LocalDateTime.now(clock));
         userRepository.save(user);
 
         String token = jwtService.generateToken(user);

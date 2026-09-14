@@ -42,9 +42,9 @@ class AuthServiceTest {
 
     @BeforeEach
     void setUp() {
-        rateLimiter = new InMemoryRateLimiter(
-                Clock.fixed(Instant.parse("2026-09-01T10:00:00Z"), ZoneOffset.UTC));
-        authService = new AuthService(userRepository, passwordEncoder, jwtService, rateLimiter);
+        Clock clock = Clock.fixed(Instant.parse("2026-09-01T10:00:00Z"), ZoneOffset.UTC);
+        rateLimiter = new InMemoryRateLimiter(clock);
+        authService = new AuthService(userRepository, passwordEncoder, jwtService, rateLimiter, clock);
     }
 
     @Test
