@@ -1,4 +1,4 @@
-package com.net2rent.net2rent_backend.dto;
+package com.net2rent.net2rent_backend.dto.request;
 
 import com.net2rent.net2rent_backend.model.enums.IncidentCategory;
 import com.net2rent.net2rent_backend.model.enums.IncidentPriority;

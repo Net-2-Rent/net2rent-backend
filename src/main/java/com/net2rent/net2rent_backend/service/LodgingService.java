@@ -1,6 +1,6 @@
 package com.net2rent.net2rent_backend.service;
 
-import com.net2rent.net2rent_backend.dto.LodgingResponse;
+import com.net2rent.net2rent_backend.dto.response.LodgingResponse;
 import com.net2rent.net2rent_backend.dto.request.LodgingRequest;
 import com.net2rent.net2rent_backend.exception.ConflictException;
 import com.net2rent.net2rent_backend.exception.NotFoundException;

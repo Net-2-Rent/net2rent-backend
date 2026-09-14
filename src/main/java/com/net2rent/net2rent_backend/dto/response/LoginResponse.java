@@ -1,4 +1,4 @@
-package com.net2rent.net2rent_backend.dto;
+package com.net2rent.net2rent_backend.dto.response;
 
 public record LoginResponse(
     String token,

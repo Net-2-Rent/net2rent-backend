@@ -9,7 +9,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import com.net2rent.net2rent_backend.dto.LoginRequest;
+import com.net2rent.net2rent_backend.dto.request.LoginRequest;
 import com.net2rent.net2rent_backend.dto.request.CreateCommentRequest;
 import com.net2rent.net2rent_backend.dto.request.CreatePhoneIncidentRequest;
 import com.net2rent.net2rent_backend.model.enums.IncidentCategory;

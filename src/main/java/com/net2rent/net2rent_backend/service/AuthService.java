@@ -3,10 +3,10 @@ package com.net2rent.net2rent_backend.service;
 import java.time.LocalDateTime;
 import java.util.Locale;
 
-import com.net2rent.net2rent_backend.dto.ChangePasswordRequest;
+import com.net2rent.net2rent_backend.dto.request.ChangePasswordRequest;
 import com.net2rent.net2rent_backend.exception.ConflictException;
-import com.net2rent.net2rent_backend.dto.LoginRequest;
-import com.net2rent.net2rent_backend.dto.LoginResponse;
+import com.net2rent.net2rent_backend.dto.request.LoginRequest;
+import com.net2rent.net2rent_backend.dto.response.LoginResponse;
 import com.net2rent.net2rent_backend.exception.InvalidCredentialsException;
 import com.net2rent.net2rent_backend.exception.TooManyRequestsException;
 import com.net2rent.net2rent_backend.model.AppUser;

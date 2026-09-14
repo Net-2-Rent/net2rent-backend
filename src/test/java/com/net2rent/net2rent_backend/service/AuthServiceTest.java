@@ -18,8 +18,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import com.net2rent.net2rent_backend.dto.ChangePasswordRequest;
-import com.net2rent.net2rent_backend.dto.LoginRequest;
+import com.net2rent.net2rent_backend.dto.request.ChangePasswordRequest;
+import com.net2rent.net2rent_backend.dto.request.LoginRequest;
 import com.net2rent.net2rent_backend.exception.ConflictException;
 import com.net2rent.net2rent_backend.exception.InvalidCredentialsException;
 import com.net2rent.net2rent_backend.exception.TooManyRequestsException;
