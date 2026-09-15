@@ -2,6 +2,7 @@ package com.net2rent.net2rent_backend.dto.response;
 
 import java.time.LocalDateTime;
 import com.net2rent.net2rent_backend.model.Incident;
+import java.util.List;
 
 public record IncidentResponse(
         Long id,
@@ -25,7 +26,9 @@ public record IncidentResponse(
         String pauseReason,
         LocalDateTime resolvedAt,
         Integer minutesSpent,
-        String resolutionNote) {
+        String resolutionNote,
+        List<IncidentImageRef> images) {
+
         public static IncidentResponse from(Incident i) {
                 String assigneeName = (i.getAssignee() == null)
                         ? null
@@ -53,6 +56,9 @@ public record IncidentResponse(
                         i.getPauseReason(),
                         i.getResolvedAt(),
                         i.getMinutesSpent(),
-                        i.getResolutionNote());
+                        i.getResolutionNote(),
+                        i.getImages().stream()
+                                .map(img -> new IncidentImageRef(img.getId(), img.getContentType()))
+                                .toList());
         }
 }

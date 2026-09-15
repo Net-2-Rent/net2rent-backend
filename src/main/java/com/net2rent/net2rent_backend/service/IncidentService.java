@@ -13,19 +13,12 @@ import com.net2rent.net2rent_backend.dto.response.GuestIncidentResponse;
 import com.net2rent.net2rent_backend.dto.response.IncidentListResponse;
 import com.net2rent.net2rent_backend.dto.response.IncidentSummaryResponse;
 import com.net2rent.net2rent_backend.dto.response.PagedResponse;
+import com.net2rent.net2rent_backend.model.*;
 import com.net2rent.net2rent_backend.model.enums.*;
+import com.net2rent.net2rent_backend.repository.*;
 import com.net2rent.net2rent_backend.security.GuestPrincipal;
 import com.net2rent.net2rent_backend.exception.ConflictException;
 import com.net2rent.net2rent_backend.exception.NotFoundException;
-import com.net2rent.net2rent_backend.model.Account;
-import com.net2rent.net2rent_backend.model.AppUser;
-import com.net2rent.net2rent_backend.model.Incident;
-import com.net2rent.net2rent_backend.model.IncidentCounter;
-import com.net2rent.net2rent_backend.model.Lodging;
-import com.net2rent.net2rent_backend.repository.IncidentCounterRepository;
-import com.net2rent.net2rent_backend.repository.IncidentRepository;
-import com.net2rent.net2rent_backend.repository.LodgingRepository;
-import com.net2rent.net2rent_backend.repository.UserRepository;
 import com.net2rent.net2rent_backend.repository.spec.IncidentSpecifications;
 import com.net2rent.net2rent_backend.repository.spec.SortField;
 import com.net2rent.net2rent_backend.security.AuthUser;
@@ -54,6 +47,7 @@ public class IncidentService {
     private final IncidentImageService incidentImageService;
     private final IncidentAccessPolicy incidentAccessPolicy;
     private final Clock clock;
+    private final IncidentImageRepository incidentImageRepository;
 
     public IncidentService(IncidentRepository incidentRepository,
                            IncidentCounterRepository incidentCounterRepository,
@@ -61,7 +55,7 @@ public class IncidentService {
                            LodgingRepository lodgingRepository,
                            UserRepository userRepository, IncidentImageService incidentImageService,
                            IncidentAccessPolicy incidentAccessPolicy,
-                           Clock clock) {
+                           Clock clock, IncidentImageRepository incidentImageRepository) {
         this.incidentRepository = incidentRepository;
         this.incidentCounterRepository = incidentCounterRepository;
         this.incidentHistoryService = incidentHistoryService;
@@ -70,6 +64,7 @@ public class IncidentService {
         this.incidentImageService = incidentImageService;
         this.incidentAccessPolicy = incidentAccessPolicy;
         this.clock = clock;
+        this.incidentImageRepository = incidentImageRepository;
     }
 
     // ---------- Lectura ----------
@@ -355,5 +350,14 @@ public class IncidentService {
         return userRepository.findByIdAndAccount_Id(operatorId, accountId)
                 .filter(u -> u.isActive() && u.getRole() == UserRole.OPERATOR)
                 .orElseThrow(() -> new ConflictException("Operario no válido"));
+    }
+
+    // ---------- Lectura de imagen ----------
+
+    @Transactional(readOnly = true)
+    public IncidentImage getImageForView(Long incidentId, Long imageId, AuthUser user) {
+        getOwnedByAccountOr404(incidentId, user);
+        return incidentImageRepository.findByIdAndIncident_Id(imageId, incidentId)
+                .orElseThrow(() -> new NotFoundException("Imagen no encontrada"));
     }
 }

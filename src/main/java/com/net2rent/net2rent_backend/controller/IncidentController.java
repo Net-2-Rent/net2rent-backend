@@ -2,6 +2,7 @@ package com.net2rent.net2rent_backend.controller;
 
 import com.net2rent.net2rent_backend.dto.request.*;
 import com.net2rent.net2rent_backend.dto.response.*;
+import com.net2rent.net2rent_backend.model.IncidentImage;
 import com.net2rent.net2rent_backend.model.enums.IncidentCategory;
 import com.net2rent.net2rent_backend.model.enums.IncidentPriority;
 import com.net2rent.net2rent_backend.model.enums.IncidentStatus;
@@ -15,8 +16,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -270,5 +270,25 @@ public class IncidentController {
             @Valid @RequestBody AssignOperatorRequest request,
             @AuthenticationPrincipal AuthUser user) {
         return incidentExecutionService.assignOperator(id, request, user);
+    }
+
+    @GetMapping("/{incidentId}/images/{imageId}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<byte[]> getImage(@PathVariable Long incidentId,
+                                           @PathVariable Long imageId,
+                                           @RequestParam(defaultValue = "false") boolean download,
+                                           @AuthenticationPrincipal AuthUser user) {
+        IncidentImage img = incidentService.getImageForView(incidentId, imageId, user);
+
+        String ext = "image/png".equals(img.getContentType()) ? "png" : "jpg";
+        ContentDisposition disposition = ContentDisposition
+                .builder(download ? "attachment" : "inline")
+                .filename("incidencia-" + incidentId + "-" + imageId + "." + ext)
+                .build();
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(img.getContentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
+                .body(img.getData());
     }
 }
