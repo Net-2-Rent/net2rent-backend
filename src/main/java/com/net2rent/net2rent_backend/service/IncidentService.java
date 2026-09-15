@@ -1,10 +1,8 @@
 package com.net2rent.net2rent_backend.service;
 
-import com.net2rent.net2rent_backend.dto.request.AssignOperatorRequest;
 import com.net2rent.net2rent_backend.dto.request.ClassifyIncidentRequest;
 import com.net2rent.net2rent_backend.dto.request.CorrectIncidentTextRequest;
 import com.net2rent.net2rent_backend.dto.response.IncidentResponse;
-import com.net2rent.net2rent_backend.dto.request.RejectIncidentRequest;
 import com.net2rent.net2rent_backend.dto.request.IncidentFilter;
 import com.net2rent.net2rent_backend.dto.response.GuestIncidentSummaryResponse;
 import com.net2rent.net2rent_backend.dto.request.CreatePhoneIncidentRequest;
@@ -97,7 +95,7 @@ public class IncidentService {
     }
 
     // Header counters (CU-LST-05)
-    
+
     private Map<IncidentStatus, Long> countByStatus(Specification<Incident> filterSpec) {
         Map<IncidentStatus, Long> counters = new LinkedHashMap<>();
         for (IncidentStatus status : IncidentStatus.values()) {

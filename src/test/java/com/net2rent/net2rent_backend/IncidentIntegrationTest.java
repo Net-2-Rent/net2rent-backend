@@ -58,7 +58,7 @@ class IncidentIntegrationTest {
                 IncidentCategory.ELECTRICITY,
                 IncidentPriority.NORMAL,
                 assigneeId,
-                "No hay luz en el salón desde ayer");
+                "No hay luz en el salón desde ayer", null);
     }
 
     @Test
@@ -86,7 +86,7 @@ class IncidentIntegrationTest {
     void missingRequiredFields_returns409() throws Exception {
         String token = loginAndGetToken("admin@net2rent.com", "Test1234");
         CreatePhoneIncidentRequest empty = new CreatePhoneIncidentRequest(
-                null, null, "", "", null, null, null, null,"");
+                null, null, "", "", null, null, null, null,"", null);
         mockMvc.perform(post("/api/incidents")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -110,7 +110,7 @@ class IncidentIntegrationTest {
         CreatePhoneIncidentRequest future = new CreatePhoneIncidentRequest(
                 1L, LocalDateTime.now().plusDays(1), "Ana", "López", null,
                 IncidentCategory.ELECTRICITY, IncidentPriority.NORMAL, null,
-                "No hay luz en el salón desde ayer");
+                "No hay luz en el salón desde ayer", null);
         mockMvc.perform(post("/api/incidents")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -295,5 +295,24 @@ class IncidentIntegrationTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.errors[0].field").value("minutes"))
                 .andExpect(jsonPath("$.errors[0].message").value("El tiempo debe estar entre 1 y 1440 minutos"));
+    }
+
+    @Test
+    void checklistEndpoint_returnsEmptyListForNewIncident() throws Exception {
+        String token = loginAndGetToken("admin@net2rent.com", "Test1234");
+
+        MvcResult created = mockMvc.perform(post("/api/incidents")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(validRequest(1L, null))))
+                .andExpect(status().isCreated()).andReturn();
+        long id = Long.parseLong(
+                objectMapper.readTree(created.getResponse().getContentAsString())
+                        .get("id").asString());
+
+        mockMvc.perform(get("/api/incidents/" + id + "/checklist")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isEmpty());
     }
 }

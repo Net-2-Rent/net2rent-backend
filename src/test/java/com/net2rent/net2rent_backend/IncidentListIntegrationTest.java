@@ -69,7 +69,7 @@ class IncidentListIntegrationTest {
                 IncidentCategory.ELECTRICITY,
                 priority,
                 assigneeId,
-                "Incidencia de prueba con descripción suficientemente larga");
+                "Incidencia de prueba con descripción suficientemente larga", null);
         MvcResult res = mockMvc.perform(post("/api/incidents")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)

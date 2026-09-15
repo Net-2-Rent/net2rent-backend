@@ -78,7 +78,7 @@ class IncidentServiceTest {
                 IncidentCategory.ELECTRICITY,
                 IncidentPriority.NORMAL,
                 assigneeId,
-                "No hay luz en el salón desde ayer");
+                "No hay luz en el salón desde ayer", null);
     }
 
     @Test
