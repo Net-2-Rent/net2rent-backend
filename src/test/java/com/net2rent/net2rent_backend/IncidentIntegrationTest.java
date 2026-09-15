@@ -58,7 +58,7 @@ class IncidentIntegrationTest {
                 IncidentCategory.ELECTRICITY,
                 IncidentPriority.NORMAL,
                 assigneeId,
-                "No hay luz en el salón desde ayer");
+                "No hay luz en el salón desde ayer", null);
     }
 
     @Test
@@ -86,7 +86,7 @@ class IncidentIntegrationTest {
     void missingRequiredFields_returns409() throws Exception {
         String token = loginAndGetToken("admin@net2rent.com", "Test1234");
         CreatePhoneIncidentRequest empty = new CreatePhoneIncidentRequest(
-                null, null, "", "", null, null, null, null,"");
+                null, null, "", "", null, null, null, null,"", null);
         mockMvc.perform(post("/api/incidents")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -110,7 +110,7 @@ class IncidentIntegrationTest {
         CreatePhoneIncidentRequest future = new CreatePhoneIncidentRequest(
                 1L, LocalDateTime.now().plusDays(1), "Ana", "López", null,
                 IncidentCategory.ELECTRICITY, IncidentPriority.NORMAL, null,
-                "No hay luz en el salón desde ayer");
+                "No hay luz en el salón desde ayer", null);
         mockMvc.perform(post("/api/incidents")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)

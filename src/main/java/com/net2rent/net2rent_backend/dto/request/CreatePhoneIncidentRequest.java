@@ -5,6 +5,7 @@ import com.net2rent.net2rent_backend.model.enums.IncidentPriority;
 import jakarta.validation.constraints.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record CreatePhoneIncidentRequest(
         @NotNull(message = "Selecciona un alojamiento")
@@ -35,6 +36,9 @@ public record CreatePhoneIncidentRequest(
 
         @NotBlank(message = "La descripción es obligatoria")
         @Size(min = 10, max = 2000, message = "La descripción debe tener entre 10 y 2.000 caracteres")
-        String description
+        String description,
+
+        @Size(max = 3, message = "Solo se pueden adjuntar hasta 3 imágenes")
+        List<String> images
 ) {
 }
