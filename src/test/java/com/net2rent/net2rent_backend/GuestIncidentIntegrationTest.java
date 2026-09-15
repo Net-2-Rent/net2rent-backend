@@ -1,5 +1,6 @@
 package com.net2rent.net2rent_backend;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -19,6 +20,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
@@ -112,5 +114,43 @@ class GuestIncidentIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(noCategory)))
                 .andExpect(status().isCreated());
+    }
+
+    @Test
+    void guestCanListAndViewOwnIncidents() throws Exception {
+        String token = guestAccessAndGetToken("APT-1001", "1234");
+
+        MvcResult created = mockMvc.perform(post("/api/guest/incidents")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(validRequest())))
+                .andExpect(status().isCreated()).andReturn();
+        String code = objectMapper.readTree(created.getResponse().getContentAsString())
+                .get("code").asString();
+
+        MvcResult list = mockMvc.perform(get("/api/guest/incidents")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk()).andReturn();
+
+        JsonNode items = objectMapper.readTree(list.getResponse().getContentAsString());
+        JsonNode match = null;
+        for (JsonNode item : items) {
+            if (code.equals(item.get("code").asString())) match = item;
+        }
+        assertThat(match).isNotNull();
+
+        mockMvc.perform(get("/api/guest/incidents/" + match.get("id").asString())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(code));
+    }
+
+    @Test
+    void staffTokenCannotUseGuestListEndpoint_returns403() throws Exception {
+        String token = staffLoginAndGetToken("admin@net2rent.com", "Test1234");
+
+        mockMvc.perform(get("/api/guest/incidents")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden());
     }
 }
