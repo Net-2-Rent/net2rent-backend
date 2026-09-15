@@ -5,6 +5,8 @@ import java.time.LocalDateTime;
 import com.net2rent.net2rent_backend.model.enums.*;
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.util.ArrayList;
 import java.util.List;
 
 @Getter
@@ -104,6 +106,6 @@ public class Incident {
 
         @OrderBy("id ASC")
         @OneToMany(mappedBy = "incident", cascade = CascadeType.ALL, orphanRemoval = true)
-        private List<IncidentImage> images;
-
+        @Builder.Default
+        private List<IncidentImage> images = new ArrayList<>();
 }
