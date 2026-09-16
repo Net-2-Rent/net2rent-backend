@@ -17,6 +17,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users")
@@ -27,15 +28,11 @@ public class UserController {
         this.userService = userService;
     }
 
-    // --- Existente (sin cambios) ---
-
     @GetMapping("/operators")
     @PreAuthorize("hasAuthority('ASSIGN_OPERATOR')")
     public List<OperatorResponse> operators(@AuthenticationPrincipal AuthUser user) {
         return userService.listAssignableOperators(user.accountId());
     }
-
-    // --- Nuevos ---
 
     @GetMapping
     @PreAuthorize("hasAuthority('MANAGE_USERS')")
@@ -82,5 +79,11 @@ public class UserController {
             @AuthenticationPrincipal AuthUser user,
             @PathVariable Long id) {
         return userService.deactivate(user.accountId(), user.userId(), id);
+    }
+
+    @GetMapping("/{id}/active-incidents-count")
+    @PreAuthorize("hasAuthority('MANAGE_USERS')")
+    public Map<String, Long> activeIncidentsCount(@PathVariable Long id) {
+        return Map.of("count", userService.countActiveIncidents(id));
     }
 }

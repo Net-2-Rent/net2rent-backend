@@ -38,8 +38,6 @@ public class UserService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    // --- Existente (sin cambios) ---
-
     @Transactional(readOnly = true)
     public List<OperatorResponse> listAssignableOperators(Long accountId) {
         return userRepository
@@ -48,8 +46,6 @@ public class UserService {
                 .map(OperatorResponse::from)
                 .toList();
     }
-
-    // --- Nuevos ---
 
     @Transactional(readOnly = true)
     public List<UserResponse> list(Long accountId, UserRole role, Boolean active) {
@@ -136,5 +132,16 @@ public class UserService {
             userRepository.save(target);
         }
         return UserResponse.from(target);
+    }
+
+    @Transactional(readOnly = true)
+    public long countActiveIncidents(Long id) {
+        AppUser target = userRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
+        if (target.getRole() != UserRole.OPERATOR) return 0;
+        return incidentRepository.countByAssignee_IdAndStatusIn(
+                target.getId(),
+                List.of(IncidentStatus.NEW, IncidentStatus.ASSIGNED,
+                        IncidentStatus.IN_PROGRESS, IncidentStatus.PAUSED));
     }
 }
