@@ -172,6 +172,8 @@ public class IncidentService {
                 .assignedAt(assignee != null ? now : null)
                 .build();
 
+        incident.setImages(incidentImageService.buildImages(req.images(), incident, now));
+
         Incident saved = incidentRepository.save(incident);
 
         AppUser actorEntity = userRepository.getReferenceById(user.userId());
