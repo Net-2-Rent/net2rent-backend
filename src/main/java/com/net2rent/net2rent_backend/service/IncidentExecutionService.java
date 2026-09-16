@@ -179,6 +179,7 @@ public class IncidentExecutionService {
 
         incident.setStatus(IncidentStatus.REJECTED);
         incident.setRejectionReason(request.reason().strip());
+        incident.setClosedAt(now);
 
         incidentHistoryService.record(incident, actor, IncidentEventType.STATUS_CHANGED,
                 current.name(), IncidentStatus.REJECTED.name(), null, now);
