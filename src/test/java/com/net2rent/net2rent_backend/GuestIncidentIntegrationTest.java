@@ -104,6 +104,20 @@ class GuestIncidentIntegrationTest {
     }
 
     @Test
+    void numericName_returnsConflict() throws Exception {
+        String token = guestAccessAndGetToken("APT-1001", "1234");
+        CreateGuestIncidentRequest numeric = new CreateGuestIncidentRequest(
+                "Ana123", "López", null, IncidentCategory.ELECTRICITY,
+                "No hay luz en el salón desde ayer", List.of());
+
+        mockMvc.perform(post("/api/guest/incidents")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(numeric)))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
     void withoutCategory_returns201() throws Exception {
         String token = guestAccessAndGetToken("APT-1001", "1234");
         CreateGuestIncidentRequest noCategory = new CreateGuestIncidentRequest(

@@ -9,9 +9,17 @@ import java.util.List;
 public record CreateGuestIncidentRequest(
 
         @NotBlank(message = "El nombre es obligatorio")
+        @Pattern(
+                regexp = "^[\\p{L}\\p{M} '-]+$",
+                message = "El nombre no puede contener números"
+        )
         String firstName,
 
         @NotBlank(message = "El apellido es obligatorio")
+        @Pattern(
+                regexp = "^[\\p{L}\\p{M} '-]+$",
+                message = "El apellido no puede contener números"
+        )
         String lastName,
 
         @Pattern(
