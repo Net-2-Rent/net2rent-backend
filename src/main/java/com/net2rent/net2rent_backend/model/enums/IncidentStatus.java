@@ -10,6 +10,9 @@ public enum IncidentStatus {
     REJECTED;
 
     public IncidentStatus guestView() {
-        return this == PAUSED ? IN_PROGRESS : this;
+        return switch (this) {
+            case ASSIGNED, PAUSED -> IN_PROGRESS;
+            default -> this;
+        };
     }
 }

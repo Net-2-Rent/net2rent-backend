@@ -195,5 +195,19 @@ SELECT setval(pg_get_serial_sequence('incident_checklist_item', 'id'), COALESCE(
 SELECT setval(pg_get_serial_sequence('incident_comment', 'id'), COALESCE((SELECT MAX(id) FROM incident_comment), 1));
 SELECT setval(pg_get_serial_sequence('incident_history', 'id'), COALESCE((SELECT MAX(id) FROM incident_history), 1));
 
--- Por si el contador ya existía de un arranque anterior con un número más bajo
-UPDATE incident_counter SET last_number = 7 WHERE account_id = 1 AND counter_year = 2026;
+-- Sincroniza el contador con el número más alto ya existente por cuenta/año,
+-- para que nunca genere un código que ya está en uso
+UPDATE incident_counter c
+SET last_number = GREATEST(
+        c.last_number,
+        COALESCE(sub.max_seq, 0)
+                  )
+    FROM (
+    SELECT account_id,
+           CAST(split_part(code, '-', 2) AS int) AS yr,
+           MAX(CAST(split_part(code, '-', 3) AS int)) AS max_seq
+    FROM incident
+    GROUP BY account_id, CAST(split_part(code, '-', 2) AS int)
+) sub
+WHERE c.account_id = sub.account_id
+  AND c.counter_year = sub.yr;
