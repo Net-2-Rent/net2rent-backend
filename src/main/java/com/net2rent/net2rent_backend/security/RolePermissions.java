@@ -21,6 +21,7 @@ public class RolePermissions {
                 WORK_INCIDENT,
                 RESOLVE_INCIDENT,
                 MANAGE_CHECKLIST,
+                IMPUT_TIME,
                 WRITE_COMMENT,
                 VIEW_LODGINGS
         );
@@ -33,6 +34,7 @@ public class RolePermissions {
                 WORK_INCIDENT,
                 RESOLVE_INCIDENT,
                 MANAGE_CHECKLIST,
+                IMPUT_TIME,
                 WRITE_COMMENT,
                 CLOSE_INCIDENT,
                 REJECT_INCIDENT,
