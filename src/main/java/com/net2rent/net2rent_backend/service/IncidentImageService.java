@@ -20,9 +20,13 @@ import java.util.List;
 public class IncidentImageService {
 
     private static final int MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+    private static final int MAX_IMAGES = 3;
 
     public List<IncidentImage> buildImages(List<String> dataUris, Incident incident, LocalDateTime now) {
         List<String> safeList = dataUris != null ? dataUris : List.of();
+        if (safeList.size() > MAX_IMAGES) {
+            throw new ConflictException("Máximo " + MAX_IMAGES + " imágenes por incidencia");
+        }
         List<IncidentImage> images = new ArrayList<>();
         for (int i = 0; i < safeList.size(); i++) {
             images.add(toIncidentImage(safeList.get(i), incident, i, now));
