@@ -12,7 +12,7 @@ public record CreateTimeEntryRequest(
     String concept,
 
     @NotNull(message = "Los minutos son obligatorios")
-    @Positive(message = "Los minutosd deben ser mayores que 0")
+    @Positive(message = "Los minutos deben ser mayores que 0")
     @Max(value = 1440, message = "Máximo 1440 minutos (24 h)")
     Integer minutes
 ) {
