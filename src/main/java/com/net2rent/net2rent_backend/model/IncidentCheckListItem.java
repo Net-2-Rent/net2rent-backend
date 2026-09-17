@@ -1,0 +1,41 @@
+package com.net2rent.net2rent_backend.model;
+
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.time.LocalDateTime;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@Entity
+@Table(name = "incident_checklist_item")
+public class IncidentCheckListItem {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "incident_id", nullable = false)
+    private Incident incident;
+
+    @Column(nullable = false, length = 200)
+    private String text;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean done = false;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer position = 0;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "checked_by_id")
+    private AppUser checkedBy;
+
+    private LocalDateTime checkedAt;
+}
