@@ -338,7 +338,7 @@ public class IncidentService {
 
     private String buildTitle(String description) {
         String trimmed = description.strip();
-        return trimmed.length() <= 80 ? trimmed : trimmed.substring(0, 80);
+        return trimmed.length() <= 80 ? trimmed : trimmed.substring(0, 79) + "…";
     }
 
     private String resolveTitle(String title, String description) {
