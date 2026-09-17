@@ -10,30 +10,55 @@ import org.junit.jupiter.api.Test;
 class RolePermissionsTest {
 
     @Test
-    void adminHas13PermissionsAndNeverSelfAssign() {
+    void adminHasFullPermissionSetAndNeverSelfAssign() {
         var perms = RolePermissions.forRole(UserRole.ADMIN);
-        assertThat(perms).hasSize(13);
-        assertThat(perms).doesNotContain(Permission.SELF_ASSIGN_FROM_POOL);
-        assertThat(perms).contains(Permission.MANAGE_USERS, Permission.MANAGE_LODGINGS);
-    }
-
-    @Test
-    void coordinatorHas11AndCannotManageResources() {
-        var perms = RolePermissions.forRole(UserRole.COORDINATOR);
-        assertThat(perms).hasSize(11);
-        assertThat(perms).contains(Permission.CLOSE_INCIDENT, Permission.ASSIGN_OPERATOR);
-        assertThat(perms).doesNotContain(
-                Permission.MANAGE_USERS,
+        assertThat(perms).containsExactlyInAnyOrder(
+                Permission.VIEW_ALL_INCIDENTS,
+                Permission.REGISTER_PHONE_INCIDENT,
+                Permission.ASSIGN_OPERATOR,
+                Permission.TRIAGE_INCIDENT,
+                Permission.WORK_INCIDENT,
+                Permission.RESOLVE_INCIDENT,
+                Permission.MANAGE_CHECKLIST,
+                Permission.IMPUTE_TIME,
+                Permission.WRITE_COMMENT,
+                Permission.CLOSE_INCIDENT,
+                Permission.REJECT_INCIDENT,
+                Permission.VIEW_LODGINGS,
                 Permission.MANAGE_LODGINGS,
-                Permission.SELF_ASSIGN_FROM_POOL);
+                Permission.MANAGE_USERS);
+        assertThat(perms).doesNotContain(Permission.SELF_ASSIGN_FROM_POOL);
     }
 
     @Test
-    void operatorHas6AndOnlyOwnScope() {
+    void coordinatorHasOfficeScopeAndCannotManageResources() {
+        var perms = RolePermissions.forRole(UserRole.COORDINATOR);
+        assertThat(perms).containsExactlyInAnyOrder(
+                Permission.VIEW_ALL_INCIDENTS,
+                Permission.REGISTER_PHONE_INCIDENT,
+                Permission.ASSIGN_OPERATOR,
+                Permission.TRIAGE_INCIDENT,
+                Permission.WORK_INCIDENT,
+                Permission.RESOLVE_INCIDENT,
+                Permission.MANAGE_CHECKLIST,
+                Permission.IMPUTE_TIME,
+                Permission.WRITE_COMMENT,
+                Permission.CLOSE_INCIDENT,
+                Permission.REJECT_INCIDENT,
+                Permission.VIEW_LODGINGS);
+    }
+
+    @Test
+    void operatorHasOwnScopeOnly() {
         var perms = RolePermissions.forRole(UserRole.OPERATOR);
-        assertThat(perms).hasSize(6);
-        assertThat(perms).contains(Permission.SELF_ASSIGN_FROM_POOL, Permission.RESOLVE_INCIDENT);
-        assertThat(perms).doesNotContain(Permission.CLOSE_INCIDENT, Permission.MANAGE_USERS);
+        assertThat(perms).containsExactlyInAnyOrder(
+                Permission.SELF_ASSIGN_FROM_POOL,
+                Permission.WORK_INCIDENT,
+                Permission.RESOLVE_INCIDENT,
+                Permission.MANAGE_CHECKLIST,
+                Permission.IMPUTE_TIME,
+                Permission.WRITE_COMMENT,
+                Permission.VIEW_LODGINGS);
     }
 
     @Test

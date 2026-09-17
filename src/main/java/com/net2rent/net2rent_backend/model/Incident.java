@@ -16,7 +16,8 @@ import java.util.List;
 @Builder
 @Entity
 @Table(name = "incident", uniqueConstraints = @UniqueConstraint(name = "uk_incident_account_code", columnNames = {
-                "account_id", "code" }))
+        "account_id", "code" }))
+
 public class Incident {
 
         @Id
@@ -56,7 +57,6 @@ public class Incident {
         @Column(nullable = false, columnDefinition = "TEXT")
         private String description;
 
-        // Datos del huésped, embebidos.
         @Column(nullable = false)
         private String guestFirstName;
 

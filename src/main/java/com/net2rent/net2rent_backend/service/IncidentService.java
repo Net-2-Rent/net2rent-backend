@@ -65,15 +65,15 @@ public class IncidentService {
         this.incidentImageRepository = incidentImageRepository;
     }
 
-    // ---------- Lectura ----------
+    // ---------- Read operations ----------
 
     @Transactional(readOnly = true)
     public IncidentListResponse list(IncidentFilter filter,
-            SortField sortField,
-            Sort.Direction direction,
-            Pageable pageable,
-            AuthUser user,
-            OperatorScope scope) {
+                                     SortField sortField,
+                                     Sort.Direction direction,
+                                     Pageable pageable,
+                                     AuthUser user,
+                                     OperatorScope scope) {
         Long operatorUserId = UserRole.OPERATOR.name().equals(user.role())
                 ? user.userId()
                 : null;
@@ -94,7 +94,7 @@ public class IncidentService {
                 countByStatus(filterSpec));
     }
 
-    // Header counters (CU-LST-05)
+    // Header counters
 
     private Map<IncidentStatus, Long> countByStatus(Specification<Incident> filterSpec) {
         Map<IncidentStatus, Long> counters = new LinkedHashMap<>();
@@ -126,7 +126,7 @@ public class IncidentService {
                 .orElseThrow(() -> new NotFoundException("Incidencia no encontrada"));
     }
 
-    // ---------- Alta por teléfono ----------
+    // ---------- Phone registration ----------
 
     @Transactional
     public IncidentResponse registerPhoneIncident(CreatePhoneIncidentRequest req, AuthUser user) {
@@ -187,7 +187,7 @@ public class IncidentService {
         return IncidentResponse.from(saved);
     }
 
-    // ---------- CU-INC-04: clasificar (categoría + prioridad) ----------
+    // ---------- Classify (category + priority) ----------
 
     @Transactional
     public IncidentResponse classify(Long incidentId, ClassifyIncidentRequest request, AuthUser user) {
@@ -204,36 +204,27 @@ public class IncidentService {
                     nameOrNull(oldCategory), request.category().name(), null, now);
         }
 
-        IncidentPriority oldPriority = incident.getPriority();
-        if (oldPriority != request.priority()) {
-            incident.setPriority(request.priority());
-            incidentHistoryService.record(incident, actorEntity, IncidentEventType.PRIORITY_CHANGED,
-                    nameOrNull(oldPriority), request.priority().name(), null, now);
-        }
+        changePriority(incident, request.priority(), actorEntity, now);
 
         incidentRepository.save(incident);
         return IncidentResponse.from(incident);
     }
 
-    // ---------- CU-INC-05: marcar como urgente ----------
+    // ---------- Mark as urgent ----------
 
     @Transactional
     public IncidentResponse markUrgent(Long incidentId, AuthUser user) {
         Incident incident = getOwnedByAccountOr404(incidentId, user);
         incidentAccessPolicy.ensureNotTerminal(incident);
 
-        IncidentPriority oldPriority = incident.getPriority();
-        if (oldPriority != IncidentPriority.URGENT) {
-            incident.setPriority(IncidentPriority.URGENT);
-            AppUser actorEntity = userRepository.getReferenceById(user.userId());
-            incidentHistoryService.record(incident, actorEntity, IncidentEventType.PRIORITY_CHANGED,
-                    nameOrNull(oldPriority), IncidentPriority.URGENT.name(), null, LocalDateTime.now(clock));
-            incidentRepository.save(incident);
-        }
+        AppUser actorEntity = userRepository.getReferenceById(user.userId());
+        changePriority(incident, IncidentPriority.URGENT, actorEntity, LocalDateTime.now(clock));
+
+        incidentRepository.save(incident);
         return IncidentResponse.from(incident);
     }
 
-    // ---------- Corregir título / descripción ----------
+    // ---------- Correct title / description ----------
 
     @Transactional
     public IncidentResponse correctText(Long incidentId, CorrectIncidentTextRequest request, AuthUser user) {
@@ -262,7 +253,7 @@ public class IncidentService {
         return IncidentResponse.from(incident);
     }
 
-    // ---------- Alta desde el portal del huésped ----------
+    // ---------- Registration from the guest portal ----------
 
     @Transactional
     public GuestIncidentResponse registerGuestIncident(CreateGuestIncidentRequest req, GuestPrincipal guest) {
@@ -306,7 +297,7 @@ public class IncidentService {
         return IncidentResponse.from(getOwnedByAccountOr404(incidentId, user));
     }
 
-    // ---------- Helpers privados ----------
+    // ---------- Private helpers ----------
 
     private String nextIncidentCode(Account account, int year) {
         IncidentCounter counter = incidentCounterRepository
@@ -321,6 +312,15 @@ public class IncidentService {
         int next = counter.getLastNumber() + 1;
         counter.setLastNumber(next);
         return String.format("INC-%d-%06d", year, next);
+    }
+
+    private void changePriority(Incident incident, IncidentPriority newPriority, AppUser actor, LocalDateTime now) {
+        IncidentPriority old = incident.getPriority();
+        if (old != newPriority) {
+            incident.setPriority(newPriority);
+            incidentHistoryService.record(incident, actor, IncidentEventType.PRIORITY_CHANGED,
+                    nameOrNull(old), newPriority.name(), null, now);
+        }
     }
 
     private String buildTitle(String description) {
@@ -352,7 +352,7 @@ public class IncidentService {
                 .orElseThrow(() -> new ConflictException("Operario no válido"));
     }
 
-    // ---------- Lectura de imagen ----------
+    // ---------- Image read ----------
 
     @Transactional(readOnly = true)
     public IncidentImage getImageForView(Long incidentId, Long imageId, AuthUser user) {
