@@ -68,7 +68,6 @@ public class IncidentChecklistService {
                 .build();
         checklistItemRepository.save(item);
 
-        // Reconstruir orden: [pendientes existentes] + [nuevo] + [hechas]
         List<IncidentCheckListItem> all = checklistItemRepository
                 .findByIncident_IdOrderByPositionAscIdAsc(incident.getId());
 
@@ -104,7 +103,6 @@ public class IncidentChecklistService {
         item.setCheckedAt(LocalDateTime.now(clock));
         checklistItemRepository.save(item);
 
-        // Reconstruir orden completo
         List<IncidentCheckListItem> all = checklistItemRepository
                 .findByIncident_IdOrderByPositionAscIdAsc(incident.getId());
 
@@ -115,11 +113,9 @@ public class IncidentChecklistService {
 
         List<Long> orderedIds = new ArrayList<>();
         if (request.done()) {
-            // Hecha → al final
             orderedIds.addAll(otherIds);
             orderedIds.add(itemId);
         } else {
-            // Pendiente → al principio
             orderedIds.add(itemId);
             orderedIds.addAll(otherIds);
         }
@@ -139,7 +135,6 @@ public class IncidentChecklistService {
 
         checklistItemRepository.delete(item);
 
-        // Reindexar los que quedan
         List<IncidentCheckListItem> remaining = checklistItemRepository
                 .findByIncident_IdOrderByPositionAscIdAsc(incident.getId());
         List<Long> remainingIds = remaining.stream()
@@ -160,8 +155,6 @@ public class IncidentChecklistService {
         return persistOrder(incident, request.orderedIds());
     }
 
-    // ---------- Helper ----------
-
     private List<ChecklistItemResponse> persistOrder(Incident incident, List<Long> orderedIds) {
         List<IncidentCheckListItem> all = checklistItemRepository
                 .findByIncident_IdOrderByPositionAscIdAsc(incident.getId());
@@ -170,7 +163,6 @@ public class IncidentChecklistService {
                 .map(IncidentCheckListItem::getId)
                 .collect(Collectors.toSet());
 
-        // Validar: mismos ids (sin duplicados) y sin faltantes/extraños
         boolean hasDuplicates = new HashSet<>(orderedIds).size() != orderedIds.size();
         boolean sameSet = new HashSet<>(orderedIds).equals(existingIds);
 

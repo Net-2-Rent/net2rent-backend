@@ -46,15 +46,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
 
-            // 1. Intentar como token de STAFF
             try {
                 Claims claims = jwtService.parseClaims(token);
                 Long userId = ((Number) claims.get("user_id")).longValue();
 
-                // Buscar usuario actual en BD (no confiar en el claim del rol)
                 Optional<AppUser> optUser = userRepository.findById(userId);
                 if (optUser.isEmpty() || !optUser.get().isActive()) {
-                    // Usuario no existe o desactivado → rechazar
                     SecurityContextHolder.clearContext();
                     filterChain.doFilter(request, response);
                     return;
@@ -80,10 +77,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 return;
 
             } catch (Exception e) {
-                // Token de staff no válido, intentar como HUÉSPED
             }
 
-            // 2. Intentar como token de HUÉSPED (sin cambios)
             try {
                 Claims guestClaims = guestTokenService.parseClaims(token);
                 Long lodgingId = ((Number) guestClaims.get("lodging_id")).longValue();

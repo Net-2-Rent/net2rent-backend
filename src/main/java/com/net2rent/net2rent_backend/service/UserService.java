@@ -105,18 +105,15 @@ public class UserService {
         AppUser target = userRepository.findByIdAndAccount_Id(id, accountId)
                 .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
 
-        // No desactivarse a sí mismo
         if (target.getId().equals(adminUserId)) {
             throw new ConflictException("La cuenta debe tener al menos un administrador activo");
         }
 
-        // Si es ADMIN y es el último, no permitir
         if (target.getRole() == UserRole.ADMIN
                 && userRepository.countByAccount_IdAndRoleAndActiveTrue(accountId, UserRole.ADMIN) <= 1) {
             throw new ConflictException("La cuenta debe tener al menos un administrador activo");
         }
 
-        // Si es OPERATOR con incidencias activas, no permitir
         if (target.getRole() == UserRole.OPERATOR) {
             long active = incidentRepository.countByAssignee_IdAndStatusIn(
                     target.getId(),

@@ -48,8 +48,6 @@ public class IncidentExecutionService {
         this.incidentChecklistService = incidentChecklistService;
     }
 
-    // ---------- CU-EXE-03: start ----------
-
     @Transactional
     public IncidentResponse start(Long incidentId, AuthUser user) {
         Incident incident = incidentService.getOwnedByAccountOr404(incidentId, user);
@@ -72,8 +70,6 @@ public class IncidentExecutionService {
         incidentRepository.save(incident);
         return IncidentResponse.from(incident);
     }
-
-    // ---------- CU-EXE-04: pause ----------
 
     @Transactional
     public IncidentResponse pause(Long incidentId, PauseIncidentRequest request, AuthUser user) {
@@ -98,8 +94,6 @@ public class IncidentExecutionService {
         return IncidentResponse.from(incident);
     }
 
-    // ---------- CU-EXE-05: resume ----------
-
     @Transactional
     public IncidentResponse resume(Long incidentId, AuthUser user) {
         Incident incident = incidentService.getOwnedByAccountOr404(incidentId, user);
@@ -121,8 +115,6 @@ public class IncidentExecutionService {
         incidentRepository.save(incident);
         return IncidentResponse.from(incident);
     }
-
-    // ---------- CU-EXE-06: resolve ----------
 
     @Transactional
     public IncidentResponse resolve(Long incidentId, ResolveIncidentRequest request, AuthUser user) {
@@ -161,8 +153,6 @@ public class IncidentExecutionService {
         return IncidentResponse.from(incident);
     }
 
-    // ---------- CU-INC-08: rechazar incidencia ----------
-
     @Transactional
     public IncidentResponse reject(Long incidentId, RejectIncidentRequest request, AuthUser user) {
         Incident incident = incidentService.getOwnedByAccountOr404(incidentId, user);
@@ -187,8 +177,6 @@ public class IncidentExecutionService {
         incidentRepository.save(incident);
         return IncidentResponse.from(incident);
     }
-
-// ---------- CU-INC-06 / CU-INC-07: asignar y reasignar operario ----------
 
     @Transactional
     public IncidentResponse assignOperator(Long incidentId, AssignOperatorRequest request, AuthUser user) {
@@ -237,8 +225,6 @@ public class IncidentExecutionService {
         return IncidentResponse.from(incident);
     }
 
-// ---------- CU-EXE-07: cerrar incidencia resuelta ----------
-
     @Transactional
     public IncidentResponse close(Long incidentId, AuthUser user) {
         Incident incident = incidentService.getOwnedByAccountOr404(incidentId, user); // 404 por cuenta (ADR-001)
@@ -261,9 +247,7 @@ public class IncidentExecutionService {
         incidentRepository.save(incident);
         return IncidentResponse.from(incident);
     }
-
-// ---------- autoassign from the pool ----------
-
+    
     @Transactional
     public IncidentResponse claim(Long incidentId, AuthUser user) {
         Incident incident = incidentRepository
