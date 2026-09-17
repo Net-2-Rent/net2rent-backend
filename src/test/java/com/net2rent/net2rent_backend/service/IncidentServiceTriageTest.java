@@ -156,8 +156,8 @@ class IncidentServiceTriageTest {
                 coordinator);
 
         assertEquals(descripcion, incident.getDescription());
+        assertEquals(80, incident.getTitle().length());
         assertEquals(descripcion.substring(0, 79) + "…", incident.getTitle());
-        assertEquals(descripcion.substring(0, 80), incident.getTitle());
     }
 
     @Test
