@@ -34,7 +34,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-// Tests del triage (NET-66): clasificar, marcar urgente y corregir texto.
 @ExtendWith(MockitoExtension.class)
 class IncidentServiceTriageTest {
 
@@ -52,7 +51,6 @@ class IncidentServiceTriageTest {
     private final Clock clock =
             Clock.fixed(Instant.parse("2026-09-02T08:00:00Z"), ZoneOffset.UTC);
 
-    // Usuario del token: coordinador de la cuenta 1.
     private final AuthUser coordinator =
             new AuthUser(10L, 1L, "coord@net2rent.com", "COORDINATOR");
 
@@ -70,7 +68,6 @@ class IncidentServiceTriageTest {
                 .id(1L).account(account).ref("APT-1001").name("Piso Centro").active(true).build();
     }
 
-    // Incidencia base "del portal": sin categoría, prioridad NORMAL, estado NEW.
     private Incident portalIncident() {
         return Incident.builder()
                 .id(100L)
@@ -88,8 +85,6 @@ class IncidentServiceTriageTest {
                 .build();
     }
 
-    // ---------- CU-INC-04: clasificar ----------
-
     @Test
     void classify_assignsCategoryAndPriority_recordsBeforeAndAfterInHistory() {
         Incident incident = portalIncident();
@@ -99,11 +94,9 @@ class IncidentServiceTriageTest {
                 new ClassifyIncidentRequest(IncidentCategory.PLUMBING, IncidentPriority.HIGH),
                 coordinator);
 
-        // Los cambios se aplican a la incidencia
         assertEquals(IncidentCategory.PLUMBING, incident.getCategory());
         assertEquals(IncidentPriority.HIGH, incident.getPriority());
 
-        // Se guardan DOS eventos de historial con valor anterior y nuevo
         ArgumentCaptor<IncidentEventType> typeCaptor = ArgumentCaptor.forClass(IncidentEventType.class);
         verify(incidentHistoryService, times(2)).record(
                 any(Incident.class), any(), typeCaptor.capture(), any(), any(), any(), any(LocalDateTime.class));
@@ -125,8 +118,6 @@ class IncidentServiceTriageTest {
 
         verify(incidentHistoryService, never()).record(any(), any(), any(), any(), any(), any(), any());
     }
-
-    // ---------- CU-INC-05: marcar urgente ----------
 
     @Test
     void markUrgent_raisesPriority_withoutChangingStatusOrAssignee_recordsHistory() {
@@ -152,10 +143,8 @@ class IncidentServiceTriageTest {
         assertEquals(IncidentEventType.PRIORITY_CHANGED, typeCaptor.getValue());
     }
 
-    // ---------- Corregir título / descripción ----------
-
     @Test
-    void correctText_withoutTitle_generatesTitleFromFirst80CharsOfDescription() {
+    void correctText_withoutTitle_generatesTruncatedTitleWithEllipsis() {
         Incident incident = portalIncident();
         when(incidentRepository.findByIdAndAccount_Id(100L, 1L)).thenReturn(Optional.of(incident));
 
@@ -167,7 +156,7 @@ class IncidentServiceTriageTest {
                 coordinator);
 
         assertEquals(descripcion, incident.getDescription());
-        assertEquals(80, incident.getTitle().length());
+        assertEquals(descripcion.substring(0, 79) + "…", incident.getTitle());
         assertEquals(descripcion.substring(0, 80), incident.getTitle());
     }
 
@@ -183,8 +172,6 @@ class IncidentServiceTriageTest {
         assertEquals("Caldera averiada", incident.getTitle());
         assertEquals("La caldera no enciende", incident.getDescription());
     }
-
-    // ---------- Aislamiento por cuenta ----------
 
     @Test
     void classify_whenIncidentBelongsToAnotherAccount_throwsNotFound() {
