@@ -3,7 +3,7 @@
 ![Java](https://img.shields.io/badge/Java-25-orange)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.1-brightgreen)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-database-blue)
-![Status](https://img.shields.io/badge/status-in%20development-yellow)
+![Status](https://img.shields.io/badge/status-MVP-brightgreen)
 
 Backend API for the Incident Management App — registration, triage, execution, and closure of incidents reported on rental properties. Two entry points: guests identify with a lodging reference + 4-digit PIN and report issues themselves; staff (coordinators/admins) log incidents called in by phone and manage them through their full lifecycle.
 
@@ -11,9 +11,11 @@ Backend API for the Incident Management App — registration, triage, execution,
 
 ## Project Status
 
-Implemented: account/user/lodging management, strict multi-tenant isolation (every query scoped to the authenticated user's account), staff JWT auth, guest access via reference + PIN, guest incident registration, incident triage (classification, urgency), checklist, comments, and history.
+The MVP scope was agreed with the client (net2rent) through their product documentation and requirement meetings; it is implemented and the test suite is green.
 
-Pending: the full incident lifecycle actions (assign, start, pause, resume, resolve, reject, close) are not implemented yet — this is the current priority. Track progress against `PRD-MVP-Incidencias.md`.
+Remaining tasks and any deviations agreed with the client are tracked in the team's internal documentation.
+
+Implemented: account/user/lodging management; strict multi-tenant isolation (every query scoped to the authenticated user's account); role-based permissions (RBAC) enforced on the backend; staff JWT auth and guest access via reference + PIN; incident registration from both the guest portal and by phone; triage (classification, urgency, text correction); the full incident lifecycle (assign/reassign, start, pause, resume, resolve, reject, close) with its state machine; checklist; comments; time tracking; and append-only history/timeline.
 
 ## Tech Stack
 
@@ -28,16 +30,15 @@ Pending: the full incident lifecycle actions (assign, start, pause, resume, reso
 ## Project Structure
 ```
 src/main/java/com/net2rent/net2rent_backend/
-├── config/ # CORS, JWT & guest-token properties, time config
-├── controller/ # REST endpoints (Auth, GuestAuth, GuestIncident, Incident, Lodging, User)
-├── dto/ # Request/response payloads
-├── exception/ # Global exception handling
-├── model/ # JPA entities
-├── repository/ # Spring Data repositories
-├── security/ # Security config and JWT / guest-token filters
-└── service/ # Business logic
+├── config/     # CORS, JWT & guest-token properties, time config
+├── controller/ # REST endpoints (auth, guest auth, incidents, checklist, time entries, timeline, lodgings, users)
+├── dto/        # Request/response payloads
+├── exception/  # Global exception handling
+├── model/      # JPA entities and enums
+├── repository/ # Spring Data repositories and query specifications
+├── security/   # Security config, RBAC matrix, JWT / guest-token filters
+└── service/    # Business logic
 ```
-
 
 ## Prerequisites
 
@@ -87,11 +88,6 @@ On every startup, Spring runs `src/main/resources/data.sql`, which seeds account
 ## API Documentation
 
 With the app running locally, the interactive API docs are at `http://localhost:8080/swagger-ui/index.html` (raw OpenAPI spec at `/v3/api-docs`).
-
-## Related Documentation
-
-- [`PRD-MVP-Incidencias.md`](./PRD-MVP-Incidencias.md) — what needs to be built and the acceptance criteria.
-- [`VOCABULARIO.md`](./VOCABULARIO.md) — domain naming conventions.
 
 ## Notes for the Team
 
