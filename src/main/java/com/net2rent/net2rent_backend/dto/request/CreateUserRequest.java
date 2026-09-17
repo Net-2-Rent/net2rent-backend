@@ -5,9 +5,17 @@ import jakarta.validation.constraints.*;
 
 public record CreateUserRequest(
     @NotBlank(message = "El nombre es obligatorio")
+    @Pattern(
+        regexp = "^[\\p{L} ]+$",
+        message = "El nombre solo puede contener letras"
+    )
     String firstName,
 
-    @NotBlank(message = "Los apellidos son obligatorios")
+    @NotBlank(message = "El apellido es obligatorio")
+    @Pattern(
+        regexp = "^[\\p{L} ]+$",
+        message = "El apellido solo puede contener letras"
+    )
     String lastName,
 
     @NotBlank(message = "El correo es obligatorio")
