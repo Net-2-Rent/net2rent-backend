@@ -48,12 +48,12 @@ public class IncidentService {
     private final IncidentImageRepository incidentImageRepository;
 
     public IncidentService(IncidentRepository incidentRepository,
-                           IncidentCounterRepository incidentCounterRepository,
-                           IncidentHistoryService incidentHistoryService,
-                           LodgingRepository lodgingRepository,
-                           UserRepository userRepository, IncidentImageService incidentImageService,
-                           IncidentAccessPolicy incidentAccessPolicy,
-                           Clock clock, IncidentImageRepository incidentImageRepository) {
+            IncidentCounterRepository incidentCounterRepository,
+            IncidentHistoryService incidentHistoryService,
+            LodgingRepository lodgingRepository,
+            UserRepository userRepository, IncidentImageService incidentImageService,
+            IncidentAccessPolicy incidentAccessPolicy,
+            Clock clock, IncidentImageRepository incidentImageRepository) {
         this.incidentRepository = incidentRepository;
         this.incidentCounterRepository = incidentCounterRepository;
         this.incidentHistoryService = incidentHistoryService;
@@ -69,11 +69,11 @@ public class IncidentService {
 
     @Transactional(readOnly = true)
     public IncidentListResponse list(IncidentFilter filter,
-                                     SortField sortField,
-                                     Sort.Direction direction,
-                                     Pageable pageable,
-                                     AuthUser user,
-                                     OperatorScope scope) {
+            SortField sortField,
+            Sort.Direction direction,
+            Pageable pageable,
+            AuthUser user,
+            OperatorScope scope) {
         Long operatorUserId = UserRole.OPERATOR.name().equals(user.role())
                 ? user.userId()
                 : null;
@@ -89,9 +89,22 @@ public class IncidentService {
                 .map(IncidentSummaryResponse::from)
                 .toList();
 
+        IncidentFilter counterFilter = new IncidentFilter(
+                null,
+                filter.priority(),
+                filter.category(),
+                filter.lodgingId(),
+                filter.assigneeId(),
+                filter.unassigned(),
+                filter.openedFrom(),
+                filter.openedTo());
+
+        Specification<Incident> counterSpec = IncidentSpecifications.forListing(user.accountId(), counterFilter,
+                operatorUserId, scope);
+
         return new IncidentListResponse(
                 PagedResponse.of(content, page),
-                countByStatus(filterSpec));
+                countByStatus(counterSpec));
     }
 
     // Header counters

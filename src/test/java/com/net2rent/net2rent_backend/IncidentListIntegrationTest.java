@@ -172,7 +172,7 @@ class IncidentListIntegrationTest {
     }
 
     @Test
-    void list_headerCounters_respectStatusFilter_literalInterpretation() throws Exception {
+    void list_headerCounters_ignoreStatusFilter_facetedCounts() throws Exception {
         String token = loginAndGetToken("admin@net2rent.com", "Test1234");
         Long operatorId = firstOperatorId(token);
         createIncident(token, 1L, IncidentPriority.NORMAL, null);
@@ -182,7 +182,7 @@ class IncidentListIntegrationTest {
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.counters.NEW").value(1))
-                .andExpect(jsonPath("$.counters.ASSIGNED").value(0));
+                .andExpect(jsonPath("$.counters.ASSIGNED").value(1));
     }
 
     // ---------- Multi-account isolation (never leaks another account's rows) ----------
