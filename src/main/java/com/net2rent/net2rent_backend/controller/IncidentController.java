@@ -72,7 +72,7 @@ public class IncidentController {
         SortField sortField = "priority".equalsIgnoreCase(sort) ? SortField.PRIORITY : SortField.OPENED_AT;
         Sort.Direction direction = "asc".equalsIgnoreCase(dir) ? Sort.Direction.ASC : Sort.Direction.DESC;
 
-        int safeSize = Math.clamp(size, 1, 100);
+        int safeSize = Math.clamp(size, 1, 20);
         int safePage = Math.max(page, 0);
 
         Pageable pageable = PageRequest.of(safePage, safeSize);
