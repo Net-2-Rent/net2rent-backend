@@ -112,7 +112,7 @@ class IncidentServiceRejectTest {
         Incident incident = incidentWithStatus(IncidentStatus.CLOSED);
         when(incidentService.getOwnedByAccountOr404(100L, coordinator)).thenReturn(incident);
         doThrow(new ConflictException("La incidencia está cerrada"))
-                .when(incidentAccessPolicy).ensureNotTerminal(incident);
+                .when(incidentAccessPolicy).ensureWorkEditable(incident);
 
         assertThrows(ConflictException.class, () ->
                 service.reject(100L, new RejectIncidentRequest("Duplicada"), coordinator));
@@ -127,7 +127,7 @@ class IncidentServiceRejectTest {
         Incident incident = incidentWithStatus(IncidentStatus.REJECTED);
         when(incidentService.getOwnedByAccountOr404(100L, coordinator)).thenReturn(incident);
         doThrow(new ConflictException("La incidencia está cerrada"))
-                .when(incidentAccessPolicy).ensureNotTerminal(incident);
+                .when(incidentAccessPolicy).ensureWorkEditable(incident);
 
         assertThrows(ConflictException.class, () ->
                 service.reject(100L, new RejectIncidentRequest("Duplicada"), coordinator));

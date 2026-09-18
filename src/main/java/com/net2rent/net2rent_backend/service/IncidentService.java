@@ -205,7 +205,7 @@ public class IncidentService {
     @Transactional
     public IncidentResponse classify(Long incidentId, ClassifyIncidentRequest request, AuthUser user) {
         Incident incident = getOwnedByAccountOr404(incidentId, user);
-        incidentAccessPolicy.ensureNotTerminal(incident);
+        incidentAccessPolicy.ensureWorkEditable(incident);
 
         LocalDateTime now = LocalDateTime.now(clock);
         AppUser actorEntity = userRepository.getReferenceById(user.userId());
@@ -228,7 +228,7 @@ public class IncidentService {
     @Transactional
     public IncidentResponse markUrgent(Long incidentId, AuthUser user) {
         Incident incident = getOwnedByAccountOr404(incidentId, user);
-        incidentAccessPolicy.ensureNotTerminal(incident);
+        incidentAccessPolicy.ensureWorkEditable(incident);
 
         AppUser actorEntity = userRepository.getReferenceById(user.userId());
         changePriority(incident, IncidentPriority.URGENT, actorEntity, LocalDateTime.now(clock));
@@ -242,7 +242,7 @@ public class IncidentService {
     @Transactional
     public IncidentResponse correctText(Long incidentId, CorrectIncidentTextRequest request, AuthUser user) {
         Incident incident = getOwnedByAccountOr404(incidentId, user);
-        incidentAccessPolicy.ensureNotTerminal(incident);
+        incidentAccessPolicy.ensureWorkEditable(incident);
 
         LocalDateTime now = LocalDateTime.now(clock);
         AppUser actorEntity = userRepository.getReferenceById(user.userId());

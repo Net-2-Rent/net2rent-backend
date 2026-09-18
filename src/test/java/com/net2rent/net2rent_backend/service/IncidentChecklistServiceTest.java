@@ -2,6 +2,7 @@ package com.net2rent.net2rent_backend.service;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
 
 import com.net2rent.net2rent_backend.dto.request.CreateChecklistItemRequest;
@@ -97,7 +98,7 @@ class IncidentChecklistServiceTest {
         Incident closed = Incident.builder().id(5L).status(IncidentStatus.CLOSED).build();
         when(incidentService.getOwnedByAccountOr404(5L, coordinator)).thenReturn(closed);
         doThrow(new ConflictException("La incidencia está cerrada"))
-                .when(incidentAccessPolicy).ensureNotTerminal(closed);
+                .when(incidentAccessPolicy).ensureWorkEditable(closed);
 
         assertThrows(ConflictException.class,
                 () -> service.addItem(5L, new CreateChecklistItemRequest("x"), coordinator));
@@ -159,7 +160,7 @@ class IncidentChecklistServiceTest {
         Incident closed = Incident.builder().id(5L).status(IncidentStatus.CLOSED).build();
         when(incidentService.getOwnedByAccountOr404(5L, coordinator)).thenReturn(closed);
         doThrow(new ConflictException("La incidencia está cerrada"))
-                .when(incidentAccessPolicy).ensureNotTerminal(closed);
+                .when(incidentAccessPolicy).ensureWorkEditable(closed);
 
         assertThrows(ConflictException.class,
                 () -> service.setDone(5L, 30L, new UpdateChecklistItemRequest(true), coordinator));
@@ -203,7 +204,7 @@ class IncidentChecklistServiceTest {
         Incident rejected = Incident.builder().id(5L).status(IncidentStatus.REJECTED).build();
         when(incidentService.getOwnedByAccountOr404(5L, coordinator)).thenReturn(rejected);
         doThrow(new ConflictException("La incidencia está cerrada"))
-                .when(incidentAccessPolicy).ensureNotTerminal(rejected);
+                .when(incidentAccessPolicy).ensureWorkEditable(rejected);
 
         assertThrows(ConflictException.class, () -> service.deleteItem(5L, 30L, coordinator));
         verify(checklistItemRepository, never()).delete(any());

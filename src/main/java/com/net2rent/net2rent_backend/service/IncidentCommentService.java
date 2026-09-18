@@ -42,11 +42,8 @@ public class IncidentCommentService {
         Incident incident = incidentService.getOwnedByAccountOr404(incidentId, user);
 
         incidentAccessPolicy.ensureCanActOn(incident, user);
-
-        if (incident.getStatus() == IncidentStatus.CLOSED
-                || incident.getStatus() == IncidentStatus.REJECTED) {
-            throw new ConflictException("La incidencia está cerrada");
-        }
+        incidentAccessPolicy.ensureWorkEditable(incident);
+        incidentAccessPolicy.ensureOperatorWorkAllowed(incident, user);
 
         IncidentComment comment = IncidentComment.builder()
                 .incident(incident)
