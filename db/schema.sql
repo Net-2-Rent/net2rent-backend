@@ -647,6 +647,11 @@ ALTER TABLE ONLY public.incident_time_entry
 
 ALTER TABLE ONLY public.incident_time_entry
     ADD CONSTRAINT fk_time_entry_author FOREIGN KEY (author_id) REFERENCES public.app_user(id);
+
+
+CREATE INDEX idx_incident_account_opened
+    ON public.incident USING btree (account_id, opened_at DESC);
+
 --
 -- PostgreSQL database dump complete
 --
