@@ -3,9 +3,15 @@ package com.net2rent.net2rent_backend.security;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.net2rent.net2rent_backend.exception.ConflictException;
 import com.net2rent.net2rent_backend.exception.ForbiddenException;
 import com.net2rent.net2rent_backend.model.AppUser;
 import com.net2rent.net2rent_backend.model.Incident;
+import com.net2rent.net2rent_backend.model.enums.IncidentStatus;
+
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import org.junit.jupiter.api.Test;
 
 class IncidentAccessPolicyTest {
@@ -50,5 +56,27 @@ class IncidentAccessPolicyTest {
 
         assertThatCode(() -> policy.ensureCanActOn(inc, coord))
                 .doesNotThrowAnyException();
+    }
+
+    @Test
+    void ensureOperatorWorkAllowed_operarioFueraDeEnCurso_lanza409() {
+        Incident assigned = Incident.builder().id(1L).status(IncidentStatus.ASSIGNED).build();
+        AuthUser operator = new AuthUser(10L, 1L, "op@net2rent.com", "OPERATOR");
+        assertThrows(ConflictException.class,
+                () -> policy.ensureOperatorWorkAllowed(assigned, operator));
+    }
+
+    @Test
+    void ensureOperatorWorkAllowed_operarioEnCurso_ok() {
+        Incident inProgress = Incident.builder().id(1L).status(IncidentStatus.IN_PROGRESS).build();
+        AuthUser operator = new AuthUser(10L, 1L, "op@net2rent.com", "OPERATOR");
+        assertDoesNotThrow(() -> policy.ensureOperatorWorkAllowed(inProgress, operator));
+    }
+
+    @Test
+    void ensureOperatorWorkAllowed_coordinadorCualquierEstado_ok() {
+        Incident assigned = Incident.builder().id(1L).status(IncidentStatus.ASSIGNED).build();
+        AuthUser coordinator = new AuthUser(5L, 1L, "co@net2rent.com", "COORDINATOR");
+        assertDoesNotThrow(() -> policy.ensureOperatorWorkAllowed(assigned, coordinator));
     }
 }
