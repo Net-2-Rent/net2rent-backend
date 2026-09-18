@@ -3,20 +3,20 @@
 -- 1) Cuentas
 INSERT INTO account (id, name, active)
 VALUES (1, 'net2Rent Demo', true)
-ON CONFLICT (id) DO NOTHING;
+    ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO account (id, name, active)
 VALUES (2, 'Otra Empresa', true)
-ON CONFLICT (id) DO NOTHING;
+    ON CONFLICT (id) DO NOTHING;
 
 -- 2) Usuarios
 INSERT INTO app_user (account_id, first_name, last_name, email, password_hash, role, active)
 VALUES
-  (1, 'Admin',       'Demo', 'admin@net2rent.com',       '$2b$10$oPN2dLCxpahTO1Af4sFutuMmS/bt3sgJCf/SDpq78qitfdywngNzy', 'ADMIN',       true),
-  (1, 'Coordinador', 'Demo', 'coordinador@net2rent.com', '$2b$10$oPN2dLCxpahTO1Af4sFutuMmS/bt3sgJCf/SDpq78qitfdywngNzy', 'COORDINATOR', true),
-  (1, 'Operario',    'Demo', 'operario@net2rent.com',    '$2b$10$oPN2dLCxpahTO1Af4sFutuMmS/bt3sgJCf/SDpq78qitfdywngNzy', 'OPERATOR',    true),
-  (1, 'Inactivo',    'Demo', 'inactivo@net2rent.com',    '$2b$10$oPN2dLCxpahTO1Af4sFutuMmS/bt3sgJCf/SDpq78qitfdywngNzy', 'OPERATOR',    false)
-ON CONFLICT (email) DO NOTHING;
+    (1, 'Admin',       'Demo', 'admin@net2rent.com',       '$2b$10$oPN2dLCxpahTO1Af4sFutuMmS/bt3sgJCf/SDpq78qitfdywngNzy', 'ADMIN',       true),
+    (1, 'Coordinador', 'Demo', 'coordinador@net2rent.com', '$2b$10$oPN2dLCxpahTO1Af4sFutuMmS/bt3sgJCf/SDpq78qitfdywngNzy', 'COORDINATOR', true),
+    (1, 'Operario',    'Demo', 'operario@net2rent.com',    '$2b$10$oPN2dLCxpahTO1Af4sFutuMmS/bt3sgJCf/SDpq78qitfdywngNzy', 'OPERATOR',    true),
+    (1, 'Inactivo',    'Demo', 'inactivo@net2rent.com',    '$2b$10$oPN2dLCxpahTO1Af4sFutuMmS/bt3sgJCf/SDpq78qitfdywngNzy', 'OPERATOR',    false)
+    ON CONFLICT (email) DO NOTHING;
 
 INSERT INTO app_user (account_id, first_name, last_name, email, password_hash, role, active)
 VALUES
@@ -29,16 +29,16 @@ INSERT INTO incident_counter (id, account_id, counter_year, last_number)
 VALUES
     (1, 1, 2026, 7),
     (2, 2, 2026, 1)
-ON CONFLICT (id) DO NOTHING;
+    ON CONFLICT (id) DO NOTHING;
 
 -- 4) Alojamiento
 INSERT INTO lodging (id, account_id, ref, pin_hash, name, address, active)
 VALUES
     (1, 1, 'APT-1001',
- '$2a$12$6a7rJB14vKRzFx/w4kWtLe1/8mp6ByGksfnjxLIHHkyN0XrTXTbTe', 'Piso Centro', 'Calle Mayor 12, 3ºB', true),
-(2, 2, 'APT-2001',
- '$2a$12$6a7rJB14vKRzFx/w4kWtLe1/8mp6ByGksfnjxLIHHkyN0XrTXTbTe', 'Piso Playa', 'Paseo Marítimo 25, 1ºA', true)
-ON CONFLICT (id) DO NOTHING;
+     '$2a$12$6a7rJB14vKRzFx/w4kWtLe1/8mp6ByGksfnjxLIHHkyN0XrTXTbTe', 'Piso Centro', 'Calle Mayor 12, 3ºB', true),
+    (2, 2, 'APT-2001',
+     '$2a$12$6a7rJB14vKRzFx/w4kWtLe1/8mp6ByGksfnjxLIHHkyN0XrTXTbTe', 'Piso Playa', 'Paseo Marítimo 25, 1ºA', true)
+    ON CONFLICT (id) DO NOTHING;
 
 -- 5) Incidencias APT-1001 (account 1)
 INSERT INTO incident (id, account_id, lodging_id, code, title, description,
@@ -69,7 +69,7 @@ VALUES
      (SELECT id FROM app_user WHERE email = 'operario@net2rent.com'),
      '2026-08-20 14:00:00', '2026-08-20 14:00:00', '2026-08-20 14:30:00', '2026-08-20 15:00:00',
      '2026-08-20 18:00:00', NULL, 45, 'Se ha reiniciado el motor de la persiana y ha vuelto a funcionar correctamente.')
-ON CONFLICT (id) DO NOTHING;
+    ON CONFLICT (id) DO NOTHING;
 
 -- 6) Incidencia APT-2001 (account 2)
 INSERT INTO incident (id, account_id, lodging_id, code, title, description,
@@ -77,13 +77,13 @@ INSERT INTO incident (id, account_id, lodging_id, code, title, description,
                       guest_first_name, guest_last_name, guest_contact,
                       opened_at, created_at, resolved_at, closed_at)
 VALUES
-(4, 2, 2, 'INC-2026-000099', 'Cerradura de la puerta principal',
+    (4, 2, 2, 'INC-2026-000099', 'Cerradura de la puerta principal',
      'La cerradura de la puerta principal está difícil de girar con la llave.',
      'LOCKSMITH', 'HIGH', 'GUEST_PORTAL', 'NEW',
      'Pedro', 'Sánchez', 'pedro@email.com',
      '2026-08-23 11:00:00', '2026-08-23 11:00:00',
      NULL, NULL)
-ON CONFLICT (id) DO NOTHING;
+    ON CONFLICT (id) DO NOTHING;
 
 -- 7) Incidencias adicionales para cubrir el resto de estados (demo)
 INSERT INTO incident (id, account_id, lodging_id, code, title, description,
@@ -127,7 +127,7 @@ VALUES
      NULL, '2026-08-25 16:00:00', '2026-08-25 16:00:00', NULL, NULL,
      NULL, NULL, NULL, NULL,
      NULL, 'No es una incidencia de mantenimiento, es una preferencia estética. Fuera del alcance del servicio.')
-ON CONFLICT (id) DO NOTHING;
+    ON CONFLICT (id) DO NOTHING;
 
 -- 8) Checklist de incidencias resueltas/cerradas
 INSERT INTO incident_checklist_item (id, incident_id, text, position, done, checked_by_id, checked_at)
@@ -140,7 +140,7 @@ VALUES
      (SELECT id FROM app_user WHERE email = 'operario@net2rent.com'), '2026-08-18 10:10:00'),
     (4, 5, 'Sustituir la bombilla', 1, true,
      (SELECT id FROM app_user WHERE email = 'operario@net2rent.com'), '2026-08-18 10:15:00')
-ON CONFLICT (id) DO NOTHING;
+    ON CONFLICT (id) DO NOTHING;
 
 -- 9) Comentarios
 INSERT INTO incident_comment (id, incident_id, author_id, text, created_at)
@@ -149,7 +149,7 @@ VALUES
      'Asignado al operario, prioridad baja.', '2026-08-18 09:30:00'),
     (2, 5, (SELECT id FROM app_user WHERE email = 'operario@net2rent.com'),
      'Revisado, era la bombilla. Sustituida.', '2026-08-18 10:20:00')
-ON CONFLICT (id) DO NOTHING;
+    ON CONFLICT (id) DO NOTHING;
 
 
 -- 10) Historial
@@ -183,8 +183,100 @@ VALUES
 
     (21, 8, NULL, 'CREATED', NULL, NULL, NULL, '2026-08-25 16:00:00'),
     (22, 8, (SELECT id FROM app_user WHERE email = 'coordinador@net2rent.com'), 'STATUS_CHANGED', 'NEW', 'REJECTED', 'Fuera del alcance del servicio de mantenimiento.', '2026-08-25 16:20:00')
-ON CONFLICT (id) DO NOTHING;
+    ON CONFLICT (id) DO NOTHING;
 
+
+-- ============================================================
+-- 11) CHECKLISTS (mezcla de marcados/pendientes para la demo)
+--     Regla CU-CHK-08: una incidencia RESUELTA o CERRADA no puede
+--     tener items pendientes -> en 3 y 5 todo done=true.
+-- ============================================================
+INSERT INTO incident_checklist_item (id, incident_id, text, position, done, checked_by_id, checked_at)
+VALUES
+    -- Incidencia 1 (NEW, HVAC): preparada por coordinacion, sin marcar
+    (5, 1, 'Comprobar el mando a distancia y cambiar las pilas', 0, false, NULL, NULL),
+    (6, 1, 'Revisar y limpiar el filtro del split', 1, false, NULL, NULL),
+    (7, 1, 'Medir con termometro la temperatura de salida del aire', 2, false, NULL, NULL),
+
+    -- Incidencia 2 (IN_PROGRESS, fuga): 1 de 3 -> se ve la barra de progreso
+    (8, 2, 'Cerrar la llave de paso del lavabo', 0, true,
+     (SELECT id FROM app_user WHERE email = 'operario@net2rent.com'), '2026-08-22 10:05:00'),
+    (9, 2, 'Sustituir el sifon danado', 1, false, NULL, NULL),
+    (10, 2, 'Comprobar que no gotea tras 10 min con el agua abierta', 2, false, NULL, NULL),
+
+    -- Incidencia 3 (RESOLVED): 1 item mas, obligatoriamente done=true
+    (11, 3, 'Probar la subida y bajada completa de la persiana', 2, true,
+     (SELECT id FROM app_user WHERE email = 'operario@net2rent.com'), '2026-08-20 17:55:00'),
+
+    -- Incidencia 6 (ASSIGNED): preparada, aun sin empezar
+    (12, 6, 'Localizar la posicion actual del router', 0, false, NULL, NULL),
+    (13, 6, 'Valorar instalar un repetidor wifi en el pasillo', 1, false, NULL, NULL),
+
+    -- Incidencia 7 (PAUSED): empezada y pausada a la espera de recambio
+    (14, 7, 'Escuchar y localizar el origen del ruido del compresor', 0, true,
+     (SELECT id FROM app_user WHERE email = 'operario@net2rent.com'), '2026-08-19 09:10:00'),
+    (15, 7, 'Sustituir la pieza del compresor (pendiente de recambio)', 1, false, NULL, NULL),
+
+    -- Incidencia 4 (NEW, cuenta 2): sin marcar
+    (16, 4, 'Probar la cerradura con la llave de repuesto', 0, false, NULL, NULL),
+    (17, 4, 'Lubricar el bombin', 1, false, NULL, NULL)
+    ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================
+-- 12) COMENTARIOS (cronologia: mezcla de texto largo y corto)
+-- ============================================================
+INSERT INTO incident_comment (id, incident_id, author_id, text, created_at)
+VALUES
+    (3, 1, (SELECT id FROM app_user WHERE email = 'coordinador@net2rent.com'),
+     'El huesped avisa de que no enfria desde ayer por la tarde. Pendiente de asignar operario en cuanto haya disponibilidad.',
+     '2026-08-21 11:00:00'),
+
+    (4, 2, (SELECT id FROM app_user WHERE email = 'operario@net2rent.com'),
+     'Localizada la fuga: viene de la junta del sifon, que esta agrietada. He cerrado la llave de paso para que no siga mojando y voy a la ferreteria a por un sifon nuevo. Vuelvo esta tarde para terminar.',
+     '2026-08-22 10:30:00'),
+    (5, 2, (SELECT id FROM app_user WHERE email = 'coordinador@net2rent.com'),
+     'Ok, avisame cuando este cerrado.', '2026-08-22 10:35:00'),
+
+    (6, 3, (SELECT id FROM app_user WHERE email = 'operario@net2rent.com'),
+     'Motor reiniciado y probado varias veces, sube y baja sin problema.', '2026-08-20 17:58:00'),
+
+    (7, 6, (SELECT id FROM app_user WHERE email = 'coordinador@net2rent.com'),
+     'Te la asigno a ti. No corre prisa, cuando puedas esta semana.', '2026-08-24 12:30:00'),
+
+    (8, 7, (SELECT id FROM app_user WHERE email = 'operario@net2rent.com'),
+     'El ruido viene del compresor. He pedido la pieza al proveedor, pero tarda unos dias, asi que dejo la incidencia en pausa hasta que llegue el recambio. En cuanto lo tenga, la retomo.',
+     '2026-08-19 09:15:00'),
+
+    (9, 8, (SELECT id FROM app_user WHERE email = 'coordinador@net2rent.com'),
+     'Comentado con el propietario: el cambio de sofa por gusto no entra en el servicio de mantenimiento.',
+     '2026-08-25 16:15:00')
+    ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================
+-- 13) IMPUTACION DE TIEMPOS (box de lineas concepto/minutos)
+--     Coherencia: en RESUELTA/CERRADA la suma de lineas cuadra
+--     con incident.minutes_spent (id 3 -> 45, id 5 -> 20).
+-- ============================================================
+INSERT INTO incident_time_entry (id, incident_id, author_id, concept, minutes, created_at)
+VALUES
+    (1, 2, (SELECT id FROM app_user WHERE email = 'operario@net2rent.com'),
+     'Diagnostico de la fuga in situ', 20, '2026-08-22 10:20:00'),
+    (2, 2, (SELECT id FROM app_user WHERE email = 'operario@net2rent.com'),
+     'Desplazamiento y compra del sifon', 30, '2026-08-22 12:00:00'),
+
+    (3, 3, (SELECT id FROM app_user WHERE email = 'operario@net2rent.com'),
+     'Revision del motor de la persiana', 15, '2026-08-20 15:30:00'),
+    (4, 3, (SELECT id FROM app_user WHERE email = 'operario@net2rent.com'),
+     'Reinicio del mecanismo y pruebas', 30, '2026-08-20 17:55:00'),
+
+    (5, 5, (SELECT id FROM app_user WHERE email = 'operario@net2rent.com'),
+     'Comprobacion del interruptor', 5, '2026-08-18 10:05:00'),
+    (6, 5, (SELECT id FROM app_user WHERE email = 'operario@net2rent.com'),
+     'Sustitucion de la bombilla', 15, '2026-08-18 10:15:00'),
+
+    (7, 7, (SELECT id FROM app_user WHERE email = 'operario@net2rent.com'),
+     'Diagnostico del ruido del compresor', 25, '2026-08-19 09:10:00')
+    ON CONFLICT (id) DO NOTHING;
 
 -- Resincroniza las secuencias tras insertar IDs explícitos en el seed
 SELECT setval(pg_get_serial_sequence('account', 'id'), COALESCE((SELECT MAX(id) FROM account), 1));
@@ -194,6 +286,7 @@ SELECT setval(pg_get_serial_sequence('incident_counter', 'id'), COALESCE((SELECT
 SELECT setval(pg_get_serial_sequence('incident_checklist_item', 'id'), COALESCE((SELECT MAX(id) FROM incident_checklist_item), 1));
 SELECT setval(pg_get_serial_sequence('incident_comment', 'id'), COALESCE((SELECT MAX(id) FROM incident_comment), 1));
 SELECT setval(pg_get_serial_sequence('incident_history', 'id'), COALESCE((SELECT MAX(id) FROM incident_history), 1));
+SELECT setval(pg_get_serial_sequence('incident_time_entry', 'id'), COALESCE((SELECT MAX(id) FROM incident_time_entry), 1));
 
 -- Sincroniza el contador con el número más alto ya existente por cuenta/año,
 -- para que nunca genere un código que ya está en uso
