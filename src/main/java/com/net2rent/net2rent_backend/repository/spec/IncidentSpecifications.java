@@ -116,7 +116,9 @@ public final class IncidentSpecifications {
                     orders.add(direction == Sort.Direction.ASC ? cb.asc(openedAt) : cb.desc(openedAt));
                 }
 
-                orders.add(cb.asc(root.get("id")));
+                Path<Long> id = root.get("id");
+                orders.add(direction == Sort.Direction.ASC ? cb.asc(id) : cb.desc(id));
+                
                 query.orderBy(orders);
             }
 
