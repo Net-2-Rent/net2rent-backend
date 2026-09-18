@@ -24,10 +24,20 @@ public class IncidentAccessPolicy {
         }
     }
 
-    public void ensureNotTerminal(Incident incident) {
+    public void ensureWorkEditable(Incident incident) {
         IncidentStatus status = incident.getStatus();
         if (status == IncidentStatus.CLOSED || status == IncidentStatus.REJECTED) {
             throw new ConflictException("La incidencia está cerrada");
+        }
+        if (status == IncidentStatus.RESOLVED) {
+            throw new ConflictException("La incidencia ya está resuelta");
+        }
+    }
+
+    public void ensureOperatorWorkAllowed(Incident incident, AuthUser user) {
+        if (UserRole.OPERATOR.name().equals(user.role())
+                && incident.getStatus() != IncidentStatus.IN_PROGRESS) {
+            throw new ConflictException("Debes tener la incidencia en curso para registrar trabajo");
         }
     }
 }

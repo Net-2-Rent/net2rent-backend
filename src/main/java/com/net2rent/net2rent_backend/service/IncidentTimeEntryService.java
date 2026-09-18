@@ -51,7 +51,8 @@ public class IncidentTimeEntryService {
     public List<TimeEntryResponse> add(Long incidentId, CreateTimeEntryRequest request, AuthUser user) {
         Incident incident = incidentService.getOwnedByAccountOr404(incidentId, user);
         incidentAccessPolicy.ensureCanActOn(incident, user);
-        incidentAccessPolicy.ensureNotTerminal(incident);
+        incidentAccessPolicy.ensureWorkEditable(incident);
+        incidentAccessPolicy.ensureOperatorWorkAllowed(incident, user);
 
         IncidentTimeEntry entry = IncidentTimeEntry.builder()
                 .incident(incident)
@@ -71,7 +72,8 @@ public class IncidentTimeEntryService {
             CreateTimeEntryRequest request, AuthUser user) {
         Incident incident = incidentService.getOwnedByAccountOr404(incidentId, user);
         incidentAccessPolicy.ensureCanActOn(incident, user);
-        incidentAccessPolicy.ensureNotTerminal(incident);
+        incidentAccessPolicy.ensureWorkEditable(incident);
+        incidentAccessPolicy.ensureOperatorWorkAllowed(incident, user);
 
         IncidentTimeEntry entry = timeEntryRepository
                 .findByIdAndIncident_Id(entryId, incident.getId())
@@ -88,7 +90,8 @@ public class IncidentTimeEntryService {
     public List<TimeEntryResponse> delete(Long incidentId, Long entryId, AuthUser user) {
         Incident incident = incidentService.getOwnedByAccountOr404(incidentId, user);
         incidentAccessPolicy.ensureCanActOn(incident, user);
-        incidentAccessPolicy.ensureNotTerminal(incident);
+        incidentAccessPolicy.ensureWorkEditable(incident);
+        incidentAccessPolicy.ensureOperatorWorkAllowed(incident, user);
 
         IncidentTimeEntry entry = timeEntryRepository
                 .findByIdAndIncident_Id(entryId, incident.getId())

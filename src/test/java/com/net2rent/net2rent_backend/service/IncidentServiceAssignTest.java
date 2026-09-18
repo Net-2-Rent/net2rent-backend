@@ -166,7 +166,7 @@ class IncidentServiceAssignTest {
         Incident inc = incident(IncidentStatus.CLOSED, null);
         when(incidentService.getOwnedByAccountOr404(100L, coordinator)).thenReturn(inc);
         doThrow(new ConflictException("La incidencia está cerrada"))
-                .when(incidentAccessPolicy).ensureNotTerminal(inc);
+                .when(incidentAccessPolicy).ensureWorkEditable(inc);
 
         assertThrows(ConflictException.class, () ->
                 service.assignOperator(100L, new AssignOperatorRequest(3L, null), coordinator));

@@ -81,6 +81,9 @@ class IncidentCommentServiceTest {
         Incident closed = Incident.builder().id(5L).status(IncidentStatus.CLOSED).build();
         when(incidentService.getOwnedByAccountOr404(5L, coordinator)).thenReturn(closed);
 
+        doThrow(new ConflictException("La incidencia está cerrada"))
+        .when(incidentAccessPolicy).ensureWorkEditable(closed);
+
         assertThrows(ConflictException.class, () -> service.addComment(5L, request, coordinator));
         verify(incidentCommentRepository, never()).save(any());
     }

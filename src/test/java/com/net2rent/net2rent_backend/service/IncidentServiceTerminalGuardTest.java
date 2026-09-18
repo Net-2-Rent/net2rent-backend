@@ -1,6 +1,7 @@
 package com.net2rent.net2rent_backend.service;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import com.net2rent.net2rent_backend.dto.request.ClassifyIncidentRequest;
@@ -87,7 +88,7 @@ class IncidentServiceTerminalGuardTest {
         Incident incident = incidentWithStatus(IncidentStatus.CLOSED);
         when(incidentRepository.findByIdAndAccount_Id(100L, 1L)).thenReturn(Optional.of(incident));
         doThrow(new ConflictException("La incidencia está cerrada"))
-                .when(incidentAccessPolicy).ensureNotTerminal(incident);
+                .when(incidentAccessPolicy).ensureWorkEditable(incident);
 
         assertThrows(ConflictException.class, () ->
                 service.classify(100L,
@@ -104,7 +105,7 @@ class IncidentServiceTerminalGuardTest {
         Incident incident = incidentWithStatus(IncidentStatus.REJECTED);
         when(incidentRepository.findByIdAndAccount_Id(100L, 1L)).thenReturn(Optional.of(incident));
         doThrow(new ConflictException("La incidencia está cerrada"))
-                .when(incidentAccessPolicy).ensureNotTerminal(incident);
+                .when(incidentAccessPolicy).ensureWorkEditable(incident);
 
         assertThrows(ConflictException.class, () ->
                 service.correctText(100L,
@@ -120,7 +121,7 @@ class IncidentServiceTerminalGuardTest {
         Incident incident = incidentWithStatus(IncidentStatus.CLOSED);
         when(incidentRepository.findByIdAndAccount_Id(100L, 1L)).thenReturn(Optional.of(incident));
         doThrow(new ConflictException("La incidencia está cerrada"))
-                .when(incidentAccessPolicy).ensureNotTerminal(incident);
+                .when(incidentAccessPolicy).ensureWorkEditable(incident);
 
         assertThrows(ConflictException.class, () ->
                 service.markUrgent(100L, coordinator));

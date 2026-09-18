@@ -159,7 +159,7 @@ public class IncidentExecutionService {
         incidentAccessPolicy.ensureCanActOn(incident, user);
 
         IncidentStatus current = incident.getStatus();
-        incidentAccessPolicy.ensureNotTerminal(incident);
+        incidentAccessPolicy.ensureWorkEditable(incident);
         if (current == IncidentStatus.RESOLVED) {
             throw new ConflictException("No se puede rechazar una incidencia ya resuelta");
         }
@@ -182,7 +182,7 @@ public class IncidentExecutionService {
     public IncidentResponse assignOperator(Long incidentId, AssignOperatorRequest request, AuthUser user) {
         Incident incident = incidentService.getOwnedByAccountOr404(incidentId, user);
         incidentAccessPolicy.ensureCanActOn(incident, user);
-        incidentAccessPolicy.ensureNotTerminal(incident);
+        incidentAccessPolicy.ensureWorkEditable(incident);
 
         IncidentStatus status = incident.getStatus();
         if (status == IncidentStatus.RESOLVED) {

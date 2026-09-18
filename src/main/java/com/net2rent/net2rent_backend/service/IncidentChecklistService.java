@@ -59,7 +59,8 @@ public class IncidentChecklistService {
     public List<ChecklistItemResponse> addItem(Long incidentId, CreateChecklistItemRequest request, AuthUser user) {
         Incident incident = incidentService.getOwnedByAccountOr404(incidentId, user);
         incidentAccessPolicy.ensureCanActOn(incident, user);
-        incidentAccessPolicy.ensureNotTerminal(incident);
+        incidentAccessPolicy.ensureWorkEditable(incident);
+        incidentAccessPolicy.ensureOperatorWorkAllowed(incident, user);
 
         IncidentCheckListItem item = IncidentCheckListItem.builder()
                 .incident(incident)
@@ -92,7 +93,8 @@ public class IncidentChecklistService {
             UpdateChecklistItemRequest request, AuthUser user) {
         Incident incident = incidentService.getOwnedByAccountOr404(incidentId, user);
         incidentAccessPolicy.ensureCanActOn(incident, user);
-        incidentAccessPolicy.ensureNotTerminal(incident);
+        incidentAccessPolicy.ensureWorkEditable(incident);
+        incidentAccessPolicy.ensureOperatorWorkAllowed(incident, user);
 
         IncidentCheckListItem item = checklistItemRepository
                 .findByIdAndIncident_Id(itemId, incident.getId())
@@ -127,7 +129,8 @@ public class IncidentChecklistService {
     public List<ChecklistItemResponse> deleteItem(Long incidentId, Long itemId, AuthUser user) {
         Incident incident = incidentService.getOwnedByAccountOr404(incidentId, user);
         incidentAccessPolicy.ensureCanActOn(incident, user);
-        incidentAccessPolicy.ensureNotTerminal(incident);
+        incidentAccessPolicy.ensureWorkEditable(incident);
+        incidentAccessPolicy.ensureOperatorWorkAllowed(incident, user);
 
         IncidentCheckListItem item = checklistItemRepository
                 .findByIdAndIncident_Id(itemId, incident.getId())
@@ -150,7 +153,8 @@ public class IncidentChecklistService {
             AuthUser user) {
         Incident incident = incidentService.getOwnedByAccountOr404(incidentId, user);
         incidentAccessPolicy.ensureCanActOn(incident, user);
-        incidentAccessPolicy.ensureNotTerminal(incident);
+        incidentAccessPolicy.ensureWorkEditable(incident);
+        incidentAccessPolicy.ensureOperatorWorkAllowed(incident, user);
 
         return persistOrder(incident, request.orderedIds());
     }
