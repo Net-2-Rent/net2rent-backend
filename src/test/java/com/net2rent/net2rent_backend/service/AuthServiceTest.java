@@ -93,18 +93,19 @@ class AuthServiceTest {
     }
 
     @Test
-    void login_blocksEmail_afterFiveFailedAttempts() {
+    void login_blocksIp_afterFiveFailedAttempts() {
         LoginRequest request = new LoginRequest("ana@test.com", "wrong-password");
+        String clientIp = "203.0.113.10";
         when(userRepository.findByEmail("ana@test.com")).thenReturn(Optional.empty());
 
         // 5 failed attempts: each rejected as invalid credentials.
         for (int i = 0; i < 5; i++) {
             assertThrows(InvalidCredentialsException.class,
-                    () -> authService.login(request));
+                    () -> authService.login(request, clientIp));
         }
 
         // 6th attempt for the same email: now blocked (429).
         assertThrows(TooManyRequestsException.class,
-                () -> authService.login(request));
+                () -> authService.login(request, clientIp));
     }
 }

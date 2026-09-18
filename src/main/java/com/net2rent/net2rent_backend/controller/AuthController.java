@@ -9,6 +9,7 @@ import com.net2rent.net2rent_backend.dto.response.LoginResponse;
 import com.net2rent.net2rent_backend.security.AuthUser;
 import com.net2rent.net2rent_backend.service.AuthService;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 import org.springframework.web.bind.annotation.PostMapping;
@@ -35,8 +36,10 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public LoginResponse login(@Valid @RequestBody LoginRequest request) {
-        return authService.login(request);
+    public LoginResponse login(@Valid @RequestBody LoginRequest request,
+            HttpServletRequest httpRequest) {
+        String clientIp = httpRequest.getRemoteAddr();
+        return authService.login(request, clientIp);
     }
 
     @PatchMapping("/password")
