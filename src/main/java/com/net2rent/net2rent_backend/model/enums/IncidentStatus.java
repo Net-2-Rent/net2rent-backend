@@ -12,6 +12,7 @@ public enum IncidentStatus {
     public IncidentStatus guestView() {
         return switch (this) {
             case ASSIGNED, PAUSED -> IN_PROGRESS;
+            case CLOSED -> RESOLVED;
             default -> this;
         };
     }
