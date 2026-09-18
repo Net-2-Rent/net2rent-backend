@@ -2,7 +2,6 @@ package com.net2rent.net2rent_backend.service;
 
 import java.time.LocalDateTime;
 import java.time.Clock;
-import java.util.Locale;
 
 import com.net2rent.net2rent_backend.dto.request.ChangePasswordRequest;
 import com.net2rent.net2rent_backend.exception.ConflictException;
@@ -40,9 +39,9 @@ public class AuthService {
     }
 
     @Transactional
-    public LoginResponse login(LoginRequest request) {
+    public LoginResponse login(LoginRequest request, String clientIp) {
 
-        String key = request.email().toLowerCase(Locale.ROOT);
+        String key = clientIp;
 
         if (rateLimiter.isBlocked(key)) {
             throw new TooManyRequestsException();
