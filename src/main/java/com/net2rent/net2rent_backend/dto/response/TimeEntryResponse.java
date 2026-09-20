@@ -12,7 +12,7 @@ public record TimeEntryResponse(
         LocalDateTime createdAt) {
 
     public static TimeEntryResponse from(IncidentTimeEntry entry) {
-        String authorName = entry.getAuthor().getFirstName() + " " + entry.getAuthor().getLastName();
+        String authorName = entry.getAuthor().getFirstName() + " " + entry.getAuthor().getLastName().trim();
 
         return new TimeEntryResponse(entry.getId(), authorName, entry.getConcept(), entry.getMinutes(), entry.getCreatedAt()
     );
